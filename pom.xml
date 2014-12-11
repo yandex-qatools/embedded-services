@@ -10,6 +10,25 @@
     <packaging>jar</packaging>
     <name>Embedded Services</name>
 
+    <distributionManagement>
+        <repository>
+            <id>yandex_qa_releases</id>
+            <name>Releases</name>
+            <url>${releases-repo}</url>
+        </repository>
+        <snapshotRepository>
+            <id>yandex_qa_snapshots</id>
+            <name>Snapshots</name>
+            <url>${snapshots-repo}</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <scm>
+        <connection>scm:git:git@github.yandex-team.ru:tms/embedded-services.git</connection>
+        <developerConnection>scm:git:git@github.yandex-team.ru:tms/embedded-services.git</developerConnection>
+        <url>git@github.yandex-team.ru:tms/embedded-services.git</url>
+    </scm>
+
     <repositories>
         <repository>
             <id>xbib.org</id>
