@@ -14,6 +14,11 @@ public class ElasticMongoIndexingService extends AbstractElasticEmbeddedService 
     private final String password;
     private final boolean enabled;
 
+    public ElasticMongoIndexingService(String mongoReplicaSet, String mongoDatabaseName,
+                                        String mongoUsername, String mongoPassword) throws IOException {
+        this(mongoReplicaSet, mongoDatabaseName, mongoUsername, mongoPassword, null, true, 10000);
+    }
+
     public ElasticMongoIndexingService(
             String mongoReplicaSet,
             String mongoDatabaseName,

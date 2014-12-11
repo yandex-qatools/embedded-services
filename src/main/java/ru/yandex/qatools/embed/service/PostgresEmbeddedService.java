@@ -22,7 +22,13 @@ public class PostgresEmbeddedService extends AbstractEmbeddedService {
     protected final String password;
     PostgresProcess process;
 
-    public PostgresEmbeddedService(String host, int port, String username, String password, String dbName, String dataDirectory, boolean enabled, int initTimeout) throws IOException {
+    public PostgresEmbeddedService(String host, int port, String username, String password, String dbName) throws IOException {
+        this(host, port, username, password, dbName, null, true, 10000);
+    }
+
+    public PostgresEmbeddedService(String host, int port,
+                                   String username, String password, String dbName,
+                                   String dataDirectory, boolean enabled, int initTimeout) throws IOException {
         super(dataDirectory, enabled, initTimeout);
         this.username = username;
         this.password = password;

@@ -27,15 +27,16 @@ public class ElasticMongoIndexingServiceTest {
     public static final String DB = "mongolastic";
     public static final String USER = "user";
     public static final String PASS = "pass";
+    public static final int INIT_TIMEOUT = 10000;
     ElasticMongoIndexingService es;
     MongoEmbeddedService mongo;
     PostDAO postDAO;
 
     @Before
     public void startEmbeddedServers() throws IOException, InterruptedException {
-        mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, null, true);
+        mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, null, true, INIT_TIMEOUT);
         mongo.start();
-        es = new ElasticMongoIndexingService(RS, DB, USER, PASS, null, true, 25000);
+        es = new ElasticMongoIndexingService(RS, DB, USER, PASS, null, true, INIT_TIMEOUT);
         es.start();
 
         final MorphiaDBService dbService = new MorphiaDBService(RS, DB, USER, PASS);
@@ -57,14 +58,14 @@ public class ElasticMongoIndexingServiceTest {
         PostMongo post2 = createPost("Some another title", "Some post without the required word");
         PostMongo post3 = createPost("Some third title", "Some post with the required keyword among other words");
 
-        es.addToIndex("post"); // create the new index within elastic using the mongodb river
+        es.addToIndex("posts"); // create the new index within elastic using the mongodb river
 
         assertThat("At least two posts must be found by query",
-                es, should(findIndexedAtLeast(PostMongo.class, "post", "body:keyword", 2))
+                es, should(findIndexedAtLeast(PostMongo.class, "posts", "body:keyword", 2))
                        .whileWaitingUntil(timeoutHasExpired(20000)));
 
         // perform the search
-        final List<IndexingResult> response = es.search("post", "body:keyword");
+        final List<IndexingResult> response = es.search("posts", "body:keyword");
         assertThat(response, hasSize(2));
         assertThat(response.get(0).getId(), is(post1.getId().toString()));
         assertThat(response.get(1).getId(), is(post3.getId().toString()));

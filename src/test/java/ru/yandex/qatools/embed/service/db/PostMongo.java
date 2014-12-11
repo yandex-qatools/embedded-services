@@ -7,7 +7,7 @@ import org.mongodb.morphia.annotations.Id;
 /**
  * @author smecsia
  */
-@Entity("post")
+@Entity("posts")
 public class PostMongo {
 
     @Id

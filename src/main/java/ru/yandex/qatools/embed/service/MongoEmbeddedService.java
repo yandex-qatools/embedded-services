@@ -9,9 +9,8 @@ import de.flapdoodle.embed.process.io.IStreamProcessor;
 import de.flapdoodle.embed.process.io.LogWatchStreamProcessor;
 import de.flapdoodle.embed.process.io.NamedOutputStreamProcessor;
 import de.flapdoodle.embed.process.runtime.Network;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -26,7 +25,7 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Runtime.getRuntime;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static jodd.io.FileUtil.*;
+import static jodd.io.FileUtil.delete;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.join;
 
@@ -35,8 +34,7 @@ import static org.apache.commons.lang3.StringUtils.join;
  *
  * @author smecsia
  */
-public class MongoEmbeddedService implements EmbeddedService {
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+public class MongoEmbeddedService extends AbstractEmbeddedService {
     private static final String HOST_PORT_SPLIT_PATTERN = "(?<!:):(?=[123456789]\\d*$)";
     public static final int INIT_TIMEOUT_MS = 25000;
     public static final String REPLSET_OK_TOKEN = "replSet PRIMARY";
@@ -48,19 +46,20 @@ public class MongoEmbeddedService implements EmbeddedService {
     private final String mongoDBName;
     private final String username;
     private final String password;
-    private final boolean removeDataDir;
     private MongodStarter runtime;
     private MongodExecutable executable;
     private IMongodConfig mongodConfig;
     private IRuntimeConfig runtimeConfig;
-    private final String dataDir;
     private final String replSetName;
     private LogWatchStreamProcessor mongodOutput;
-    private final boolean enabled;
-    private volatile boolean stopped = false;
-    private String[] roles = {"\"readWrite\"","{\"db\":\"local\",\"role\":\"read\"}"};
+    private String[] roles = {"\"readWrite\"", "{\"db\":\"local\",\"role\":\"read\"}"};
     private String adminUsername = "admin";
     private String adminPassword = "admin";
+
+    public MongoEmbeddedService(String replicaSet, String mongoDatabaseName,
+                                String mongoUsername, String mongoPassword, String replSetName) throws IOException {
+        this(replicaSet, mongoDatabaseName, mongoUsername, mongoPassword, replSetName, null, true, 10000);
+    }
 
     public MongoEmbeddedService(String replicaSet,
                                 String mongoDatabaseName,
@@ -68,8 +67,10 @@ public class MongoEmbeddedService implements EmbeddedService {
                                 String mongoPassword,
                                 String replSetName,
                                 String dataDirectory,
-                                boolean enabled
+                                boolean enabled,
+                                int initTimeout
     ) throws IOException {
+        super(dataDirectory, enabled, initTimeout);
         this.username = mongoUsername;
         this.password = mongoPassword;
         this.mongoDBName = mongoDatabaseName;
@@ -78,129 +79,72 @@ public class MongoEmbeddedService implements EmbeddedService {
         final String[] replSetEl = replicaSet.split(",")[0].split(HOST_PORT_SPLIT_PATTERN);
         this.host = replSetEl[0];
         this.port = parseInt(replSetEl[1]);
-        if (isEmpty(dataDirectory) || dataDirectory.equals("TMP")) {
-            this.removeDataDir = true;
-            this.dataDir = createTempDirectory("mongo", "data").getPath();
-        } else {
-            this.dataDir = dataDirectory;
-            this.removeDataDir = false;
-        }
-        this.enabled = enabled;
     }
 
     @Override
-    public void start() {
-        if (enabled) {
-            logger.info(format("Starting embedded MongoDB instance at replSet=%s, replSetName=%s, dataDir=%s",
-                    replicaSet, replSetName, dataDir));
+    public void doStart() {
+        mongodOutput = new LogWatchStreamProcessor(
+                format(REPLSET_OK_TOKEN),
+                Collections.<String>emptySet(),
+                namedConsole("[mongod output]"));
+        runtimeConfig = new RuntimeConfigBuilder()
+                .defaults(Command.MongoD)
+                .processOutput(new ProcessOutput(
+                        mongodOutput,
+                        namedConsole("[mongod error]"),
+                        console()))
+                .build();
+        runtime = MongodStarter.getInstance(runtimeConfig);
 
-            mongodOutput = new LogWatchStreamProcessor(
-                    format(REPLSET_OK_TOKEN),
-                    Collections.<String>emptySet(),
-                    namedConsole("[mongod output]"));
-            runtimeConfig = new RuntimeConfigBuilder()
-                    .defaults(Command.MongoD)
-                    .processOutput(new ProcessOutput(
-                            mongodOutput,
-                            namedConsole("[mongod error]"),
-                            console()))
+        try {
+            final File lockFile = Paths.get(dataDirectory, "mongod.lock").toFile();
+            final IMongoCmdOptions cmdOptions = new MongoCmdOptionsBuilder()
+                    .enableAuth(true)
                     .build();
-            runtime = MongodStarter.getInstance(runtimeConfig);
+            MongodConfigBuilder builder = new MongodConfigBuilder()
+                    .version(Version.Main.PRODUCTION)
+                    .cmdOptions(cmdOptions)
+                    .net(new Net(host, port, Network.localhostIsIPv6()));
 
-            try {
-                final File lockFile = Paths.get(dataDir, "mongod.lock").toFile();
-                final IMongoCmdOptions cmdOptions = new MongoCmdOptionsBuilder()
-                        .enableAuth(true)
-                        .build();
-                MongodConfigBuilder builder = new MongodConfigBuilder()
-                        .version(Version.Main.PRODUCTION)
-                        .cmdOptions(cmdOptions)
-                        .net(new Net(host, port, Network.localhostIsIPv6()));
-
-                if (dataDir != null && replSetName != null) {
-                    builder.replication(new Storage(dataDir, replSetName, 0));
-                    try {
-                        delete(lockFile);
-                    } catch (Exception e) {
-                        logger.warn("No lock file found for embedded mongodb or removal failed: " + e.getMessage());
-                    }
+            if (dataDirectory != null && replSetName != null) {
+                builder.replication(new Storage(dataDirectory, replSetName, 0));
+                try {
+                    delete(lockFile);
+                } catch (Exception e) {
+                    logger.warn("No lock file found for embedded mongodb or removal failed: " + e.getMessage());
                 }
-
-                mongodConfig = builder.build();
-
-                executable = null;
-                executable = runtime.prepare(mongodConfig);
-                mongod = executable.start();
-
-                final MongoEmbeddedService self = this;
-                getRuntime().addShutdownHook(new Thread() {
-                    public void run() {
-                        self.stop();
-                    }
-                });
-
-                if (replSetName != null) {
-                    try {
-                        initiateReplicaSet();
-                    } catch (InterruptedException e) {
-                        logger.error("Failed to intialize the replica set", e);
-                    }
-                }
-                addUsers();
-            } catch (Exception e) {
-                logger.error("Failed to startup embedded MongoDB", e);
             }
+
+            mongodConfig = builder.build();
+
+            executable = null;
+            executable = runtime.prepare(mongodConfig);
+            mongod = executable.start();
+
+            final MongoEmbeddedService self = this;
+            getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    self.stop();
+                }
+            });
+
+            if (replSetName != null) {
+                try {
+                    initiateReplicaSet();
+                } catch (InterruptedException e) {
+                    logger.error("Failed to intialize the replica set", e);
+                }
+            }
+            addUsers();
+        } catch (Exception e) {
+            logger.error("Failed to startup embedded MongoDB", e);
         }
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public String[] getRoles() {
-        return roles;
-    }
-
-    public void setRoles(String... roles) {
-        this.roles = roles;
-    }
-
-    public String getAdminUsername() {
-        return adminUsername;
-    }
-
-    public void setAdminUsername(String adminUsername) {
-        this.adminUsername = adminUsername;
-    }
-
-    public String getAdminPassword() {
-        return adminPassword;
-    }
-
-    public void setAdminPassword(String adminPassword) {
-        this.adminPassword = adminPassword;
-    }
-
     @Override
-    public void stop() {
-        if (!stopped) {
-            logger.info("Shutting down the embedded mongodb service...");
-            stopped = true;
-            if (executable != null) {
-                executable.stop();
-            }
-            if (removeDataDir) {
-                try {
-                    deleteDir(new File(dataDir));
-                } catch (Exception e) {
-                    logger.error("Failed to remove data dir", e);
-                }
-            }
-
+    public void doStop() {
+        if (executable != null) {
+            executable.stop();
         }
     }
 
@@ -244,14 +188,16 @@ public class MongoEmbeddedService implements EmbeddedService {
                         console()))
                 .build();
         MongoShellStarter starter = MongoShellStarter.getInstance(runtimeConfig);
+        final File scriptFile = writeTmpScriptFile(scriptText);
         starter.prepare(new MongoShellConfigBuilder()
-                .scriptName(writeTmpScriptFile(scriptText).getAbsolutePath())
+                .scriptName(scriptFile.getAbsolutePath())
                 .version(mongodConfig.version())
                 .net(mongodConfig.net())
                 .build()).start();
         if (mongoOutput instanceof LogWatchStreamProcessor) {
             ((LogWatchStreamProcessor) mongoOutput).waitForResult(INIT_TIMEOUT_MS);
         }
+        FileUtils.deleteQuietly(scriptFile);
     }
 
     private File writeTmpScriptFile(String scriptText) throws IOException {
@@ -264,5 +210,38 @@ public class MongoEmbeddedService implements EmbeddedService {
 
     public Net net() {
         return mongodConfig.net();
+    }
+
+
+    public String getHost() {
+        return host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public String[] getRoles() {
+        return roles;
+    }
+
+    public void setRoles(String... roles) {
+        this.roles = roles;
+    }
+
+    public String getAdminUsername() {
+        return adminUsername;
+    }
+
+    public void setAdminUsername(String adminUsername) {
+        this.adminUsername = adminUsername;
+    }
+
+    public String getAdminPassword() {
+        return adminPassword;
+    }
+
+    public void setAdminPassword(String adminPassword) {
+        this.adminPassword = adminPassword;
     }
 }

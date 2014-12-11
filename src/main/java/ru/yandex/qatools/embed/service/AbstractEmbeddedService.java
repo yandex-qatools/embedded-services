@@ -27,7 +27,7 @@ public abstract class AbstractEmbeddedService implements EmbeddedService {
 
         if (isEmpty(dataDirectory) || dataDirectory.equals("TMP")) {
             this.removeDataDir = true;
-            this.dataDirectory = createTempDirectory("postgres", "data").getPath();
+            this.dataDirectory = createTempDirectory(getClass().getSimpleName().toLowerCase(), "data").getPath();
         } else {
             this.dataDirectory = dataDirectory;
             this.removeDataDir = false;
