@@ -9,7 +9,6 @@ import de.flapdoodle.embed.process.io.IStreamProcessor;
 import de.flapdoodle.embed.process.io.LogWatchStreamProcessor;
 import de.flapdoodle.embed.process.io.NamedOutputStreamProcessor;
 import de.flapdoodle.embed.process.runtime.Network;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.BufferedWriter;
@@ -199,11 +198,11 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         if (mongoOutput instanceof LogWatchStreamProcessor) {
             ((LogWatchStreamProcessor) mongoOutput).waitForResult(INIT_TIMEOUT_MS);
         }
-        FileUtils.deleteQuietly(scriptFile);
     }
 
     private File writeTmpScriptFile(String scriptText) throws IOException {
         File scriptFile = File.createTempFile("tempfile", ".js");
+        scriptFile.deleteOnExit();
         BufferedWriter bw = new BufferedWriter(new FileWriter(scriptFile));
         bw.write(scriptText);
         bw.close();
