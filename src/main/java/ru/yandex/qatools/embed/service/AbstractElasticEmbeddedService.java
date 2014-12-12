@@ -12,8 +12,11 @@ import ru.yandex.qatools.embed.service.beans.IndexingResult;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
+import static java.util.Collections.newSetFromMap;
 import static org.elasticsearch.index.query.QueryBuilders.queryString;
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
@@ -21,7 +24,8 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
  * @author Ilya Sadykov
  */
 public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedService implements IndexingService {
-    private Node node;
+    protected volatile Node node;
+    protected final Set<String> indexedCollections = newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     public AbstractElasticEmbeddedService(String dataDirectory, boolean enabled, int initTimeout) throws IOException {
         super(dataDirectory, enabled, initTimeout);
@@ -33,7 +37,9 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     public void doStart() {
         ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder()
                 .put("http.enabled", "false")
-                .put("path.data", dataDirectory);
+                .put("path.home", dataDirectory)
+                .put("path.data", dataDirectory + "/data")
+                .put("path.logs", dataDirectory + "/logs");
         this.node = nodeBuilder().local(true).settings(elasticsearchSettings.build()).node();
     }
 
@@ -74,6 +80,11 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     @Override
     public void addToIndex(String collectionName) {
         try {
+            if (indexedCollections.contains(collectionName)) {
+                logger.debug(format("Skipping collection '%s' indexing: it is already added to index!", collectionName));
+                return;
+            }
+            indexedCollections.add(collectionName);
             logger.debug(format("Adding collection '%s' to the embedded ElasticSearch index...", collectionName));
             indexCollection(collectionName);
         } catch (IOException e) {

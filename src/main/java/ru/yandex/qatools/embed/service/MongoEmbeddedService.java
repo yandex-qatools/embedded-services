@@ -128,14 +128,16 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                 }
             });
 
-            if (replSetName != null) {
-                try {
-                    initiateReplicaSet();
-                } catch (InterruptedException e) {
-                    logger.error("Failed to intialize the replica set", e);
+            if (newDirectory) {
+                if (replSetName != null) {
+                    try {
+                        initiateReplicaSet();
+                    } catch (InterruptedException e) {
+                        logger.error("Failed to intialize the replica set", e);
+                    }
                 }
+                addUsers();
             }
-            addUsers();
         } catch (Exception e) {
             logger.error("Failed to startup embedded MongoDB", e);
         }

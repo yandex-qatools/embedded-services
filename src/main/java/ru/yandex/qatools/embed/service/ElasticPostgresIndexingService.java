@@ -14,9 +14,9 @@ public class ElasticPostgresIndexingService extends AbstractElasticEmbeddedServi
     protected final String dbName;
     protected final String username;
     protected final String password;
-    private final Class<? extends Driver> driverClass;
-    private final String driverProto;
-    private final String driverOpts;
+    protected final Class<? extends Driver> driverClass;
+    protected final String driverProto;
+    protected final String driverOpts;
 
     public ElasticPostgresIndexingService(Class<? extends Driver> driverClass,
                                           String driverProto, String driverOpts,
@@ -40,30 +40,40 @@ public class ElasticPostgresIndexingService extends AbstractElasticEmbeddedServi
     }
 
     @Override
-    protected void indexCollection(String collectionName) throws IOException {
+    protected synchronized void indexCollection(String tableName) throws IOException {
         if (enabled) {
             final XContentBuilder config = jsonBuilder()
                     .startObject()
                     .field("type", "jdbc")
                         .startObject("jdbc")
                             .field("driver", driverClass.getName())
-                            .field("url", format("jdbc:%s://%s:%s/%s%s", driverProto, host, port, dbName, driverOpts))
+                            .field("url", formatConnectionUrl())
                             .field("user", username)
                             .field("password", password)
                             .field("index", "index")
-                            .field("type", collectionName)
+                            .field("type", tableName)
                             .field("strategy", "simple")
-                            .field("sql", format("select id as _id, * from %s ", collectionName))
+                            .field("sql", formatIndexQuery(tableName))
                         .endObject()
                         .startObject("index")
-                            .field("index", collectionName)
-                            .field("type", collectionName)
+                            .field("index", tableName)
+                            .field("type", tableName)
                             .field("bulk_size", "1000")
                             .field("bulk_timeout", "30")
                         .endObject()
                     .endObject();
-            getClient().prepareIndex("_river", collectionName, "_meta").setSource(config)
+            getClient().prepareDelete("_river", tableName, "_meta").execute().actionGet(initTimeout);
+            getClient().prepareIndex("_river", tableName, "_meta").setSource(config)
                     .execute().actionGet(initTimeout);
+            logger.info("Table {}.{} indexing request sent to ES", dbName, tableName);
         }
+    }
+
+    protected String formatConnectionUrl() {
+        return format("jdbc:%s://%s:%s/%s%s", driverProto, host, port, dbName, driverOpts);
+    }
+
+    protected String formatIndexQuery(String collectionName) {
+        return format("select id as _id, * from %s ", collectionName);
     }
 }

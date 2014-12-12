@@ -43,6 +43,8 @@ public class ElasticMongoIndexingServiceTest {
         dbService.getDatastore().getDB().getMongo().setReadPreference(nearest());
         dbService.getDatastore().setDefaultWriteConcern(ACKNOWLEDGED);
         postDAO = new PostDAO(dbService);
+
+        es.addToIndex("posts"); // create the new index within elastic using the mongodb river
     }
 
     @After
@@ -57,8 +59,6 @@ public class ElasticMongoIndexingServiceTest {
         PostMongo post1 = createPost("Some title", "Some post with keyword among other words");
         PostMongo post2 = createPost("Some another title", "Some post without the required word");
         PostMongo post3 = createPost("Some third title", "Some post with the required keyword among other words");
-
-        es.addToIndex("posts"); // create the new index within elastic using the mongodb river
 
         assertThat("At least two posts must be found by query",
                 es, should(findIndexedAtLeast(PostMongo.class, "posts", "body:keyword", 2))

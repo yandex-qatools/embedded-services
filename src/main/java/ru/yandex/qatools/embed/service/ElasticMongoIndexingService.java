@@ -37,7 +37,7 @@ public class ElasticMongoIndexingService extends AbstractElasticEmbeddedService 
     }
 
     @Override
-    protected void indexCollection(String collectionName) throws IOException {
+    protected synchronized void indexCollection(String collectionName) throws IOException {
         if (enabled) {
             final XContentBuilder config =
                     jsonBuilder()
@@ -90,6 +90,7 @@ public class ElasticMongoIndexingService extends AbstractElasticEmbeddedService 
                     .endObject();
             getClient().prepareIndex("_river", collectionName, "_meta").setSource(config)
                     .execute().actionGet(initTimeout);
+            logger.info("Collection {}.{} indexing request sent to ES", mongoDBName, collectionName);
         }
     }
 }
