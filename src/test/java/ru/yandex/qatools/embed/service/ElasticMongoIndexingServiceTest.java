@@ -1,5 +1,6 @@
 package ru.yandex.qatools.embed.service;
 
+import org.javalite.common.Collections;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -8,10 +9,16 @@ import ru.yandex.qatools.embed.service.db.*;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import static ch.lambdaj.Lambda.collect;
+import static ch.lambdaj.Lambda.on;
 import static com.mongodb.ReadPreference.nearest;
 import static com.mongodb.WriteConcern.ACKNOWLEDGED;
+import static java.lang.Thread.sleep;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -36,6 +43,10 @@ public class ElasticMongoIndexingServiceTest {
         mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, null, true, INIT_TIMEOUT);
         mongo.start();
         es = new ElasticMongoIndexingService(RS, DB, USER, PASS, null, true, INIT_TIMEOUT);
+        es.setupMappings(Collections.<String, String>map(
+                "posts.user.detail._id", "string",
+                "users.detail._id", "string"
+        ));
         es.start();
 
         final MorphiaDBService dbService = new MorphiaDBService(RS, DB, USER, PASS);
@@ -56,10 +67,14 @@ public class ElasticMongoIndexingServiceTest {
     @Test
     public void testElasticFullTextSearch() throws IOException, InterruptedException {
         // create some test data
-        UserMongo user1 = createUser("Ivan Petrov");
-        UserMongo user2 = createUser("Ivan Ivanov");
+        UserMongo user1 = createUser(1L, "Ivan Petrov", new UserDetailMongoLong(1L));
+        sleep(1000);
+        UserMongo user2 = createUser(2L, "Ivan Ivanov", new UserDetailMongoString("some-string"));
+        sleep(1000);
         PostMongo post1 = createPost(user1, "Some title", "Some post with keyword among other words");
+        sleep(1000);
         PostMongo post2 = createPost(user2, "Some another title", "Some post without the required word");
+        sleep(1000);
         PostMongo post3 = createPost(user2, "Some third title", "Some post with the required keyword among other words");
 
         assertThat("At least two users must be found by query",
@@ -67,7 +82,7 @@ public class ElasticMongoIndexingServiceTest {
                         .whileWaitingUntil(timeoutHasExpired(20000)));
         final List<IndexingResult> users = es.search("users", "name:(Ivan AND Petrov)");
         assertThat(users, hasSize(1));
-        assertThat(users.get(0).getId(), is(user1.getId().toString()));
+        assertThat(users.get(0).getId(), is(String.valueOf(user1.getId())));
 
         assertThat("At least two posts must be found by query",
                 es, should(findIndexedAtLeast(PostMongo.class, "posts", "body:keyword", 2))
@@ -76,14 +91,16 @@ public class ElasticMongoIndexingServiceTest {
         // perform the search
         final List<IndexingResult> posts = es.search("posts", "body:keyword");
         assertThat(posts, hasSize(2));
-        assertThat(posts.get(0).getId(), is(post1.getId().toString()));
-        assertThat(posts.get(1).getId(), is(post3.getId().toString()));
+        Set<String> postIds = new HashSet<>(collect(posts, on(IndexingResult.class).getId()));
+        assertThat(postIds, containsInAnyOrder(post1.getId().toString(), post3.getId().toString()));
     }
 
 
-    private UserMongo createUser(String name) throws UnknownHostException {
+    private UserMongo createUser(Long id, String name, UserDetailMongo detail) throws UnknownHostException {
         final UserMongo user = new UserMongo();
+        user.setId(id);
         user.setName(name);
+        user.setDetail(detail);
         userDAO.save(user);
         return user;
     }
@@ -91,7 +108,7 @@ public class ElasticMongoIndexingServiceTest {
     private PostMongo createPost(UserMongo user, String title, String description) throws UnknownHostException {
         final PostMongo post = new PostMongo();
         post.setTitle(title);
-        post.setUserId(user.getId());
+        post.setUser(user);
         post.setBody(description);
         postDAO.save(post);
         return post;

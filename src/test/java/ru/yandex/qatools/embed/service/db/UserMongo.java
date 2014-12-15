@@ -1,6 +1,6 @@
 package ru.yandex.qatools.embed.service.db;
 
-import org.bson.types.ObjectId;
+import org.mongodb.morphia.annotations.Embedded;
 import org.mongodb.morphia.annotations.Entity;
 import org.mongodb.morphia.annotations.Id;
 
@@ -11,20 +11,27 @@ import org.mongodb.morphia.annotations.Id;
 public class UserMongo {
 
     @Id
-    private ObjectId id;
+    private Long id;
+
+    @Embedded
+    private UserDetailMongo detail;
 
     private String name;
 
-    public ObjectId getId() {
+    public UserDetailMongo getDetail() {
+        return detail;
+    }
+
+    public void setDetail(UserDetailMongo detail) {
+        this.detail = detail;
+    }
+
+    public long getId() {
         return id;
     }
 
-    public void setId(ObjectId id) {
+    public void setId(Long id) {
         this.id = id;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public void setName(String name) {
