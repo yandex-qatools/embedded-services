@@ -34,42 +34,6 @@ public class ElasticMongoIndexingService extends AbstractElasticEmbeddedService 
         this.password = mongoPassword;
     }
 
-//    @Override
-//    protected void initMappings() {
-//        if (enabled) {
-//            try {
-//                final XContentBuilder config = jsonBuilder()
-//                .startObject("mappings")
-//                    .startObject("_default_")
-//                        .field("dynamic", true)
-//                        .startObject("properties")
-//                            .startObject("posts")
-//                                .startObject("user")
-//                                    .startObject("detail")
-//                                        .startObject("_id")
-//                                            .field("type", "string")
-//                                        .endObject()
-//                                    .endObject()
-//                                .endObject()
-//                            .endObject()
-//                            .startObject("users")
-//                                .startObject("detail")
-//                                    .startObject("_id")
-//                                        .field("type", "string")
-//                                    .endObject()
-//                                .endObject()
-//                            .endObject()
-//                        .endObject()
-//                    .endObject()
-//                .endObject();
-//                getClient().admin().indices().prepareCreate(dbName).setSource(config).execute().actionGet(initTimeout);
-//                logger.info("Database {} mapping request sent to ES: {}", dbName, config.string());
-//            } catch(Exception e){
-//                logger.error("Failed to initialize mappings for ES", e);
-//            }
-//        }
-//    }
-
     @Override
     protected void indexAllCollections() throws IOException {
         if (enabled) {
