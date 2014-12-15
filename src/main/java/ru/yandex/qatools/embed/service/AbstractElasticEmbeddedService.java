@@ -24,12 +24,16 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
  * @author Ilya Sadykov
  */
 public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedService implements IndexingService {
+    protected final String dbName;
     protected volatile Node node;
     protected final Set<String> indexedCollections = newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
-    public AbstractElasticEmbeddedService(String dataDirectory, boolean enabled, int initTimeout) throws IOException {
+    public AbstractElasticEmbeddedService(String dbName, String dataDirectory, boolean enabled, int initTimeout) throws IOException {
         super(dataDirectory, enabled, initTimeout);
+        this.dbName = dbName;
     }
+
+    protected abstract void indexAllCollections() throws IOException;
 
     protected abstract void indexCollection(String collectionName) throws IOException;
 
@@ -73,6 +77,15 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     }
 
     @Override
+    public void indexAll() {
+        try {
+            indexAllCollections();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to index all collections", e);
+        }
+    }
+
+    @Override
     public void addToIndex(Class modelClass) {
         addToIndex(collectionName(modelClass));
     }
@@ -108,7 +121,8 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     }
 
     private CountResponse count(String collectionName, QueryBuilder query) {
-        return getClient().prepareCount().setTypes(collectionName)
+        return getClient().prepareCount()
+                .setTypes(collectionName)
                 .setQuery(query)
                 .execute()
                 .actionGet();

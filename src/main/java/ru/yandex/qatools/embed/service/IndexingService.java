@@ -14,6 +14,8 @@ public interface IndexingService {
 
     void addToIndex(Class modelClass);
 
+    void indexAll();
+
     void addToIndex(String collectionName);
 
     String collectionName(Class modelClass);

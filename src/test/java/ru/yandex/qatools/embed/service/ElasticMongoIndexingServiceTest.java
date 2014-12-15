@@ -4,9 +4,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import ru.yandex.qatools.embed.service.beans.IndexingResult;
-import ru.yandex.qatools.embed.service.db.MorphiaDBService;
-import ru.yandex.qatools.embed.service.db.PostMongo;
-import ru.yandex.qatools.embed.service.db.PostDAO;
+import ru.yandex.qatools.embed.service.db.*;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -31,6 +29,7 @@ public class ElasticMongoIndexingServiceTest {
     ElasticMongoIndexingService es;
     MongoEmbeddedService mongo;
     PostDAO postDAO;
+    UserDAO userDAO;
 
     @Before
     public void startEmbeddedServers() throws IOException, InterruptedException {
@@ -43,8 +42,9 @@ public class ElasticMongoIndexingServiceTest {
         dbService.getDatastore().getDB().getMongo().setReadPreference(nearest());
         dbService.getDatastore().setDefaultWriteConcern(ACKNOWLEDGED);
         postDAO = new PostDAO(dbService);
+        userDAO = new UserDAO(dbService);
 
-        es.addToIndex("posts"); // create the new index within elastic using the mongodb river
+        es.indexAllCollections();
     }
 
     @After
@@ -56,25 +56,42 @@ public class ElasticMongoIndexingServiceTest {
     @Test
     public void testElasticFullTextSearch() throws IOException, InterruptedException {
         // create some test data
-        PostMongo post1 = createPost("Some title", "Some post with keyword among other words");
-        PostMongo post2 = createPost("Some another title", "Some post without the required word");
-        PostMongo post3 = createPost("Some third title", "Some post with the required keyword among other words");
+        UserMongo user1 = createUser("Ivan Petrov");
+        UserMongo user2 = createUser("Ivan Ivanov");
+        PostMongo post1 = createPost(user1, "Some title", "Some post with keyword among other words");
+        PostMongo post2 = createPost(user2, "Some another title", "Some post without the required word");
+        PostMongo post3 = createPost(user2, "Some third title", "Some post with the required keyword among other words");
+
+        assertThat("At least two users must be found by query",
+                es, should(findIndexedAtLeast(UserMongo.class, "users", "name:Ivan", 2))
+                        .whileWaitingUntil(timeoutHasExpired(20000)));
+        final List<IndexingResult> users = es.search("users", "name:(Ivan AND Petrov)");
+        assertThat(users, hasSize(1));
+        assertThat(users.get(0).getId(), is(user1.getId().toString()));
 
         assertThat("At least two posts must be found by query",
                 es, should(findIndexedAtLeast(PostMongo.class, "posts", "body:keyword", 2))
-                       .whileWaitingUntil(timeoutHasExpired(20000)));
+                        .whileWaitingUntil(timeoutHasExpired(20000)));
 
         // perform the search
-        final List<IndexingResult> response = es.search("posts", "body:keyword");
-        assertThat(response, hasSize(2));
-        assertThat(response.get(0).getId(), is(post1.getId().toString()));
-        assertThat(response.get(1).getId(), is(post3.getId().toString()));
+        final List<IndexingResult> posts = es.search("posts", "body:keyword");
+        assertThat(posts, hasSize(2));
+        assertThat(posts.get(0).getId(), is(post1.getId().toString()));
+        assertThat(posts.get(1).getId(), is(post3.getId().toString()));
     }
 
 
-    private PostMongo createPost(String title, String description) throws UnknownHostException {
+    private UserMongo createUser(String name) throws UnknownHostException {
+        final UserMongo user = new UserMongo();
+        user.setName(name);
+        userDAO.save(user);
+        return user;
+    }
+
+    private PostMongo createPost(UserMongo user, String title, String description) throws UnknownHostException {
         final PostMongo post = new PostMongo();
         post.setTitle(title);
+        post.setUserId(user.getId());
         post.setBody(description);
         postDAO.save(post);
         return post;

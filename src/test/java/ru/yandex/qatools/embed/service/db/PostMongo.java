@@ -13,6 +13,8 @@ public class PostMongo {
     @Id
     private ObjectId id;
 
+    private ObjectId userId;
+
     private String title;
 
     private String body;
@@ -23,6 +25,14 @@ public class PostMongo {
 
     public void setId(ObjectId id) {
         this.id = id;
+    }
+
+    public ObjectId getUserId() {
+        return userId;
+    }
+
+    public void setUserId(ObjectId userId) {
+        this.userId = userId;
     }
 
     public String getTitle() {

@@ -1,6 +1,7 @@
 package ru.yandex.qatools.embed.service;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.IOException;
 import java.sql.Driver;
@@ -11,7 +12,6 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 public class ElasticPostgresIndexingService extends AbstractElasticEmbeddedService implements IndexingService {
     protected final String host;
     protected final int port;
-    protected final String dbName;
     protected final String username;
     protected final String password;
     protected final Class<? extends Driver> driverClass;
@@ -28,15 +28,19 @@ public class ElasticPostgresIndexingService extends AbstractElasticEmbeddedServi
                                           String driverProto, String driverOpts,
                                           String host, int port, String username, String password,  String dbName,
                                           String dataDirectory, boolean enabled, int initTimeout) throws IOException {
-        super(dataDirectory, enabled, initTimeout);
+        super(dbName, dataDirectory, enabled, initTimeout);
         this.username = username;
         this.password = password;
         this.host = host;
         this.port = port;
-        this.dbName = dbName;
         this.driverClass = driverClass;
         this.driverOpts = driverOpts;
         this.driverProto = driverProto;
+    }
+
+    @Override
+    protected void indexAllCollections() throws IOException {
+        throw new NotImplementedException();
     }
 
     @Override
