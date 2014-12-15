@@ -22,5 +22,7 @@ public interface IndexingService {
 
     void addToIndex(String collectionName);
 
+    void start();
+
     String collectionName(Class modelClass);
 }
