@@ -162,7 +162,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         final String scriptText = join(format("db = db.getSiblingDB('admin');\n " +
                                 "db.createUser({\"user\":\"%s\",\"pwd\":\"%s\"," +
                                 "\"roles\":[\"dbAdminAnyDatabase\",\"clusterAdmin\",\"dbOwner\",\"userAdminAnyDatabase\"," +
-                                "{\"db\":\"local\",\"role\":\"dbAdmin\"}]});\n",
+                                "{\"db\":\"local\",\"role\":\"dbAdmin\"},{\"db\":\"local\",\"role\":\"readWrite\"}]});\n",
                         adminUsername, adminPassword),
                 format("db.auth('%s','%s');", adminUsername, adminPassword),
                 format("db = db.getSiblingDB('%s'); db.createUser({\"user\":\"%s\",\"pwd\":\"%s\",\"roles\":[%s]});\n" +

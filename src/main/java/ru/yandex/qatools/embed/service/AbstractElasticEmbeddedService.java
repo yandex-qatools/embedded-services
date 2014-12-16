@@ -1,6 +1,8 @@
 package ru.yandex.qatools.embed.service;
 
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequestBuilder;
 import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
@@ -12,7 +14,10 @@ import org.elasticsearch.search.SearchHit;
 import ru.yandex.qatools.embed.service.beans.IndexingResult;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
@@ -26,7 +31,6 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
  */
 public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedService implements IndexingService {
     protected final String dbName;
-    protected Map<String, String> typedFields;
     protected volatile Node node;
     protected final Set<String> indexedCollections = newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
@@ -40,12 +44,6 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     protected abstract void indexCollection(String collectionName) throws IOException;
 
     @Override
-    public void setupMappings(Map<String, String> values) throws IOException {
-        typedFields = new HashMap<>();
-        typedFields.putAll(values);
-    }
-
-    @Override
     public void doStart() {
         ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder()
                 .put("http.enabled", "false")
@@ -53,13 +51,11 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                 .put("path.data", dataDirectory + "/data")
                 .put("path.logs", dataDirectory + "/logs");
         this.node = nodeBuilder().local(true).settings(elasticsearchSettings.build()).node();
-        initMappings();
     }
 
     @Override
     public void doStop() {
         if (node != null) {
-            node.stop();
             node.close();
             node = null;
         }
@@ -114,36 +110,61 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
         }
     }
 
-    protected void initMappings() {
+    @Override
+    public void initMappings(Map<String, String> typedFields) {
         if (enabled) {
             try {
-                if(typedFields.isEmpty()){
+                if (typedFields.isEmpty()) {
                     logger.info("Database {} skipping mapping configuration", dbName);
                     return;
                 }
-                final CreateIndexRequestBuilder builder = getClient().admin().indices().prepareCreate(dbName);
+
+                IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName).execute().get();
+                if (!existsResp.isExists()) {
+                    logger.info("Index does not exists {}, creating...", dbName);
+                    getClient().admin().indices().prepareCreate(dbName).execute().get();
+                }
                 for (String fieldPath : typedFields.keySet()) {
                     String[] parts = fieldPath.split("\\.");
                     String type = parts[0];
-                    final XContentBuilder config =jsonBuilder()
-                    .startObject().startObject(type);
-                        for(int i = 1; i < parts.length; ++i){
+
+                    GetMappingsResponse getResp = getClient().admin().indices().prepareGetMappings(dbName)
+                            .setTypes(type).execute().get();
+                    if (getResp.getMappings().containsKey(type)) {
+                        logger.info("Mapping index already exists {}/{}...", dbName, fieldPath);
+                        try {
+                            logger.info("Deleting mapping index {}/{}...", dbName, fieldPath);
+                            getClient().admin().indices().prepareDeleteMapping(dbName).setType(type).execute().get();
+                        } catch (Exception e) {
+                            logger.error("Failed to delete mapping index {}/{}", dbName, fieldPath, e);
+                        }
+                    }
+
+                    try {
+                        logger.info("Creating mapping index {}/{}...", dbName, fieldPath);
+                        final PutMappingRequestBuilder putBuilder = getClient().admin().indices().preparePutMapping(dbName);
+                        final XContentBuilder config = jsonBuilder()
+                                .startObject().startObject(type);
+                        for (int i = 1; i < parts.length; ++i) {
                             config
-                            .startObject("properties")
-                                .startObject(parts[i])
+                                    .startObject("properties")
+                                    .startObject(parts[i])
                                     .field("type", (i >= parts.length - 1) ? typedFields.get(fieldPath) : "nested");
                         }
-                    for(String part : parts){
-                                config
-                            .endObject()
-                        .endObject();
+                        for (String part : parts) {
+                            config
+                                    .endObject()
+                                    .endObject();
+                        }
+                        putBuilder.setType(type).setSource(config);
+                        final String value = "type=" + typedFields.get(fieldPath);
+                        putBuilder.execute().actionGet(initTimeout);
+                        logger.info("Mapping index {}/{}: {} creation sent to ES", dbName, fieldPath, value);
+                    } catch (Exception e) {
+                        logger.error("Failed to create mapping index {}/{}", dbName, fieldPath, e);
                     }
-                    builder.addMapping(type, config);
-                    final String value = "type=" + typedFields.get(fieldPath);
-                    logger.info("Mapping for {}/{}: {}", dbName, type, value);
                 }
-                builder.execute().actionGet(initTimeout);
-                logger.info("Database {} mapping request sent to ES", dbName);
+                logger.info("Database {} mapping requests sent to ES", dbName);
             } catch (Exception e) {
                 logger.error("Failed to setup mappings for db {}", dbName, e);
             }

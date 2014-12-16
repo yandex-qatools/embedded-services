@@ -7,4 +7,6 @@ public interface EmbeddedService {
     void start();
 
     void stop();
+
+    boolean isStarted();
 }

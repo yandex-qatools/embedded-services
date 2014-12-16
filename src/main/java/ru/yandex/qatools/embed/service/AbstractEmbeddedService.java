@@ -44,6 +44,11 @@ public abstract class AbstractEmbeddedService implements EmbeddedService {
     protected abstract void doStop() throws Exception;
 
     @Override
+    public boolean isStarted() {
+        return started;
+    }
+
+    @Override
     public void start() {
         if (this.enabled) {
             try {
