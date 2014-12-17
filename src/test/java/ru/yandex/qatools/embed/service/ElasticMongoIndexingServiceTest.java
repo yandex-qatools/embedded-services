@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static ch.lambdaj.Lambda.collect;
@@ -45,10 +46,17 @@ public class ElasticMongoIndexingServiceTest {
         es = new ElasticMongoIndexingService(RS, DB, USER, PASS, null, true, INIT_TIMEOUT);
         es.start();
 
-        es.initMappings(Collections.<String, String>map(
-                "posts.user.detail._id", "string",
-                "users.detail._id", "string"
+        es.initMappings(Collections.<String, Map<String, Object>>map(
+                "posts.user.detail", Collections.<String, Object>map(
+                        "type", "object", "enabled", false),
+                "users.detail", Collections.<String, Object>map(
+                        "type", "object", "enabled", false)
         ));
+
+//        es.initSettings(Collections.<String, Object>map(
+//                "index.mapping.ignore_malformed", true,
+//                "index.fail_on_merge_failure", false
+//        ));
 
         final MorphiaDBService dbService = new MorphiaDBService(RS, DB, USER, PASS);
         dbService.getDatastore().getDB().getMongo().setReadPreference(nearest());
@@ -67,11 +75,6 @@ public class ElasticMongoIndexingServiceTest {
 
     @Test
     public void testElasticFullTextSearch() throws IOException, InterruptedException {
-        es.initMappings(Collections.<String, String>map(
-                "posts.user.detail._id", "string",
-                "users.detail._id", "string"
-        ));
-
         // create some test data
         UserMongo user1 = createUser(1L, "Ivan Petrov", new UserDetailMongoLong(1L));
         sleep(1000);
