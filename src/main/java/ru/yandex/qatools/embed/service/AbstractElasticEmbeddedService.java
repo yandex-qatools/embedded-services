@@ -52,7 +52,9 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     @Override
     public void doStart() {
         ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder();
-        elasticsearchSettings.put(settings);
+        for(String key : settings.keySet()){
+            elasticsearchSettings.put(key, settings.get(key));
+        }
         this.node = nodeBuilder().local(true).settings(elasticsearchSettings.build()).node();
     }
 
