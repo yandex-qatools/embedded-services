@@ -31,10 +31,18 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     protected final String dbName;
     protected volatile Node node;
     protected final Set<String> indexedCollections = newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    protected final Map<String, Object> settings = new HashMap<>();
 
     public AbstractElasticEmbeddedService(String dbName, String dataDirectory, boolean enabled, int initTimeout) throws IOException {
         super(dataDirectory, enabled, initTimeout);
         this.dbName = dbName;
+
+        // Initializing the defaults
+        settings.put("http.enabled", "false");
+        settings.put("path.home", dataDirectory);
+        settings.put("threadpool.bulk.queue_size", 5000);
+        settings.put("path.data", dataDirectory + "/data");
+        settings.put("path.logs", dataDirectory + "/logs");
     }
 
     protected abstract void indexAllCollections() throws IOException;
@@ -43,12 +51,8 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
 
     @Override
     public void doStart() {
-        ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder()
-                .put("http.enabled", "false")
-                .put("path.home", dataDirectory)
-                .put("threadpool.bulk.queue_size", 5000)
-                .put("path.data", dataDirectory + "/data")
-                .put("path.logs", dataDirectory + "/logs");
+        ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder();
+        elasticsearchSettings.put(settings);
         this.node = nodeBuilder().local(true).settings(elasticsearchSettings.build()).node();
     }
 
@@ -111,6 +115,11 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
 
     @Override
     public void initSettings(Map<String, Object> settings) {
+        this.settings.putAll(settings);
+    }
+
+    @Override
+    public void updateIndexSettings(Map<String, Object> settings) {
         if (enabled) {
             try {
                 if (settings.isEmpty()) {
@@ -175,7 +184,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
 
 
     @Override
-    public void initMappings(Map<String, Map<String, Object>> typedFields) {
+    public void updateMappings(Map<String, Map<String, Object>> typedFields) {
         if (enabled) {
             try {
                 if (typedFields.isEmpty()) {

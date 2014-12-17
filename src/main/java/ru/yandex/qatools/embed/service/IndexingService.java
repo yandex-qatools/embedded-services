@@ -21,7 +21,9 @@ public interface IndexingService extends EmbeddedService {
 
     void initSettings(Map<String, Object> settings);
 
-    void initMappings(Map<String, Map<String, Object>> typedFields);
+    void updateIndexSettings(Map<String, Object> settings);
+
+    void updateMappings(Map<String, Map<String, Object>> typedFields);
 
     String collectionName(Class modelClass);
 }

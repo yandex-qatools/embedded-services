@@ -46,14 +46,14 @@ public class ElasticMongoIndexingServiceTest {
         es = new ElasticMongoIndexingService(RS, DB, USER, PASS, null, true, INIT_TIMEOUT);
         es.start();
 
-        es.initMappings(Collections.<String, Map<String, Object>>map(
+        es.updateMappings(Collections.<String, Map<String, Object>>map(
                 "posts.user.detail", Collections.<String, Object>map(
                         "type", "object", "enabled", false),
                 "users.detail", Collections.<String, Object>map(
                         "type", "object", "enabled", false)
         ));
 
-//        es.initSettings(Collections.<String, Object>map(
+//        es.updateIndexSettings(Collections.<String, Object>map(
 //                "index.mapping.ignore_malformed", true,
 //                "index.fail_on_merge_failure", false
 //        ));
