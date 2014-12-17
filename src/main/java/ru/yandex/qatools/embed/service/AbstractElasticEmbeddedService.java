@@ -53,7 +53,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     public void doStart() {
         ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder();
         for(String key : settings.keySet()){
-            elasticsearchSettings.put(key, settings.get(key));
+            elasticsearchSettings.put(key, String.valueOf(settings.get(key)));
         }
         this.node = nodeBuilder().local(true).settings(elasticsearchSettings.build()).node();
     }
@@ -128,11 +128,11 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                     logger.info("Database {} skipping settings configuration", dbName);
                     return;
                 }
-                IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName).execute().get();
+                IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName).execute().actionGet(initTimeout);
                 try {
                     if (existsResp.isExists()) {
                         logger.info("Index exists {}, removing...", dbName);
-                        getClient().admin().indices().prepareDelete(dbName).execute().get();
+                        getClient().admin().indices().prepareDelete(dbName).execute().actionGet(initTimeout);
                     }
                     logger.info("Creating settings index {}...", dbName);
                     final Map<String, Object> config = new HashMap<>();
@@ -177,7 +177,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     }
 
     private void createIndexIfNotExists() throws InterruptedException, java.util.concurrent.ExecutionException {
-        IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName).execute().get();
+        IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName).execute().actionGet(initTimeout);
         if (!existsResp.isExists()) {
             logger.info("Index does not exists {}, creating...", dbName);
             getClient().admin().indices().prepareCreate(dbName).execute().actionGet(initTimeout);
@@ -199,12 +199,12 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                     String type = parts[0];
 
                     GetMappingsResponse getResp = getClient().admin().indices().prepareGetMappings(dbName)
-                            .setTypes(type).execute().get();
+                            .setTypes(type).execute().actionGet(initTimeout);
                     if (getResp.getMappings().containsKey(type)) {
                         logger.info("Mapping index already exists {}/{}...", dbName, fieldPath);
                         try {
                             logger.info("Deleting mapping index {}/{}...", dbName, fieldPath);
-                            getClient().admin().indices().prepareDeleteMapping(dbName).setType(type).execute().get();
+                            getClient().admin().indices().prepareDeleteMapping(dbName).setType(type).execute().actionGet(initTimeout);
                         } catch (Exception e) {
                             logger.error("Failed to delete mapping index {}/{}", dbName, fieldPath, e);
                         }
