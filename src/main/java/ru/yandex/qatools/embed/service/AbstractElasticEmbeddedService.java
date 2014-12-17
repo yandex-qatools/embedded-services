@@ -46,6 +46,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
         ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder()
                 .put("http.enabled", "false")
                 .put("path.home", dataDirectory)
+                .put("threadpool.bulk.queue_size", 5000)
                 .put("path.data", dataDirectory + "/data")
                 .put("path.logs", dataDirectory + "/logs");
         this.node = nodeBuilder().local(true).settings(elasticsearchSettings.build()).node();
