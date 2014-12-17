@@ -39,10 +39,10 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
 
         // Initializing the defaults
         settings.put("http.enabled", "false");
-        settings.put("path.home", dataDirectory);
+        settings.put("path.home", this.dataDirectory);
         settings.put("threadpool.bulk.queue_size", 5000);
-        settings.put("path.data", dataDirectory + "/data");
-        settings.put("path.logs", dataDirectory + "/logs");
+        settings.put("path.data", this.dataDirectory + "/data");
+        settings.put("path.logs", this.dataDirectory + "/logs");
     }
 
     protected abstract void indexAllCollections() throws IOException;
@@ -128,7 +128,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                     logger.info("Database {} skipping settings configuration", dbName);
                     return;
                 }
-                IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName).execute().actionGet(initTimeout);
+                IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName).execute().actionGet();
                 try {
                     if (existsResp.isExists()) {
                         logger.info("Index exists {}, removing...", dbName);
