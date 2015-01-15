@@ -128,7 +128,9 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                     logger.info("Database {} skipping settings configuration", dbName);
                     return;
                 }
-                IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName).execute().actionGet();
+                IndicesExistsResponse existsResp = getClient().admin().indices().prepareExists(dbName)
+                        .execute()
+                        .actionGet(initTimeout);
                 try {
                     if (existsResp.isExists()) {
                         logger.info("Index exists {}, removing...", dbName);
@@ -267,7 +269,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                 .setSize((int) count.getCount())
                 .addFields("id")
                 .execute()
-                .actionGet();
+                .actionGet(initTimeout);
     }
 
     protected CountResponse count(String collectionName, QueryBuilder query) {
@@ -275,7 +277,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                 .setTypes(collectionName)
                 .setQuery(query)
                 .execute()
-                .actionGet();
+                .actionGet(initTimeout);
     }
 
     @Override
