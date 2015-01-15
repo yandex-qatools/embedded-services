@@ -47,6 +47,8 @@ public class ElasticMongoIndexingServiceTest {
         es.start();
 
         es.updateMappings(Collections.<String, Map<String, Object>>map(
+                "posts._id", Collections.<String, Object>map(
+                        "type", "string", "index", "not_analyzed", "store", true),
                 "posts.user.detail", Collections.<String, Object>map(
                         "type", "object", "enabled", false),
                 "users.detail", Collections.<String, Object>map(
@@ -92,6 +94,10 @@ public class ElasticMongoIndexingServiceTest {
         final List<IndexingResult> users = es.search("users", "name:(Ivan AND Petrov)");
         assertThat(users, hasSize(1));
         assertThat(users.get(0).getId(), is(String.valueOf(user1.getId())));
+
+        assertThat("Post must be found by id",
+                es, should(findIndexedAtLeast(PostMongo.class, "posts", "_id:\"" + post1.getId() + "\"", 1))
+                        .whileWaitingUntil(timeoutHasExpired(20000)));
 
         assertThat("At least two posts must be found by query",
                 es, should(findIndexedAtLeast(PostMongo.class, "posts", "body:keyword", 2))

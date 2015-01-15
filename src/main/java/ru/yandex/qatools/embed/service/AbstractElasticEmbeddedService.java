@@ -216,24 +216,32 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                         final XContentBuilder config = jsonBuilder()
                                 .startObject().
                                         startObject(type);
-                        for (int i = 1; i < parts.length; ++i) {
-                            config
-                                    .startObject("properties")
-                                    .startObject(parts[i]);
-                            final Map<String, Object> opts = typedFields.get(fieldPath);
-                            if (i < parts.length - 1) {
-                                config.field("type", "nested");
-                            } else {
-                                for (String opt : opts.keySet()) {
-                                    config.field(opt, opts.get(opt));
+                            boolean idMapping = (parts.length == 2 && parts[1].equals("_id"));
+                            for (int i = 1; i < parts.length; ++i) {
+                                if(idMapping) {
+                                    config
+                                            .startObject("_id");
+                                } else {
+                                    config
+                                            .startObject("properties")
+                                            .startObject(parts[i]);
+                                }
+                                final Map<String, Object> opts = typedFields.get(fieldPath);
+                                if (i < parts.length - 1) {
+                                    config.field("type", "nested");
+                                } else {
+                                    for (String opt : opts.keySet()) {
+                                        config.field(opt, opts.get(opt));
+                                    }
                                 }
                             }
-                        }
-                        for (String part : parts) {
-                            config
-                                    .endObject()
-                                    .endObject();
-                        }
+                            for (String part : parts) {
+                                config.endObject();
+                                if(!idMapping){
+                                    config.endObject();
+                                }
+                            }
+
                         putBuilder.setType(type).setSource(config);
                         putBuilder.execute().actionGet(initTimeout);
                         logger.info("Mapping index {}/{}: {} creation sent to ES", dbName, fieldPath, join(typedFields.get(fieldPath)));
