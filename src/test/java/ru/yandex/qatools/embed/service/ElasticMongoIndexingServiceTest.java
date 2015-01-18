@@ -43,30 +43,35 @@ public class ElasticMongoIndexingServiceTest {
     public void startEmbeddedServers() throws IOException, InterruptedException {
         mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, null, true, INIT_TIMEOUT);
         mongo.start();
-        es = new ElasticMongoIndexingService(RS, DB, USER, PASS, null, true, INIT_TIMEOUT);
-        es.start();
-
-        es.updateMappings(Collections.<String, Map<String, Object>>map(
-                "posts._id", Collections.<String, Object>map(
-                        "type", "string", "index", "not_analyzed", "store", true),
-                "posts.user.detail", Collections.<String, Object>map(
-                        "type", "object", "enabled", false),
-                "users.detail", Collections.<String, Object>map(
-                        "type", "object", "enabled", false)
-        ));
-
-//        es.updateIndexSettings(Collections.<String, Object>map(
-//                "index.mapping.ignore_malformed", true,
-//                "index.fail_on_merge_failure", false
-//        ));
-
         final MorphiaDBService dbService = new MorphiaDBService(RS, DB, USER, PASS);
         dbService.getDatastore().getDB().getMongo().setReadPreference(nearest());
         dbService.getDatastore().setDefaultWriteConcern(ACKNOWLEDGED);
         postDAO = new PostDAO(dbService);
         userDAO = new UserDAO(dbService);
 
-        es.indexAllCollections();
+        es = new ElasticMongoIndexingService(RS, DB, USER, PASS, null, true, INIT_TIMEOUT);
+        es.start();
+
+        es.initSettings(Collections.<String, Object>map(
+                "index.mapping.ignore_malformed", true,
+                "index.fail_on_merge_failure", false
+        ), Collections.<String, Map<String, Object>>map(
+                "posts._id", Collections.<String, Object>map(
+                        "type", "string", "index", "not_analyzed", "store", true),
+                "posts.user.detail", Collections.<String, Object>map(
+                        "type", "object", "enabled", false),
+                "users.detail", Collections.<String, Object>map(
+                        "type", "object", "enabled", false)
+        ), new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    es.indexAllCollections();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     @After
@@ -82,11 +87,11 @@ public class ElasticMongoIndexingServiceTest {
         sleep(1000);
         UserMongo user2 = createUser(2L, "Ivan Ivanov", new UserDetailMongoString("some-string"));
         sleep(1000);
-        PostMongo post1 = createPost(user1, "Some title", "Some post with keyword among other words");
+        PostMongo post1 = createPost(1L, user1, "Some title", "Some post with keyword among other words");
         sleep(1000);
-        PostMongo post2 = createPost(user2, "Some another title", "Some post without the required word");
+        PostMongo post2 = createPost(2L, user2, "Some another title", "Some post without the required word");
         sleep(1000);
-        PostMongo post3 = createPost(user2, "Some third title", "Some post with the required keyword among other words");
+        PostMongo post3 = createPost(3L, user2, "Some third title", "Some post with the required keyword among other words");
 
         assertThat("At least two users must be found by query",
                 es, should(findIndexedAtLeast(UserMongo.class, "users", "name:Ivan", 2))
@@ -94,6 +99,10 @@ public class ElasticMongoIndexingServiceTest {
         final List<IndexingResult> users = es.search("users", "name:(Ivan AND Petrov)");
         assertThat(users, hasSize(1));
         assertThat(users.get(0).getId(), is(String.valueOf(user1.getId())));
+
+        assertThat("User must be found by id",
+                es, should(findIndexedAtLeast(UserMongo.class, "users", "_id:\"" + user1.getId() + "\"", 1))
+                        .whileWaitingUntil(timeoutHasExpired(20000)));
 
         assertThat("Post must be found by id",
                 es, should(findIndexedAtLeast(PostMongo.class, "posts", "_id:\"" + post1.getId() + "\"", 1))
@@ -107,7 +116,7 @@ public class ElasticMongoIndexingServiceTest {
         final List<IndexingResult> posts = es.search("posts", "body:keyword");
         assertThat(posts, hasSize(2));
         Set<String> postIds = new HashSet<>(collect(posts, on(IndexingResult.class).getId()));
-        assertThat(postIds, containsInAnyOrder(post1.getId().toString(), post3.getId().toString()));
+        assertThat(postIds, containsInAnyOrder(String.valueOf(post1.getId()), String.valueOf(post3.getId())));
     }
 
 
@@ -120,8 +129,9 @@ public class ElasticMongoIndexingServiceTest {
         return user;
     }
 
-    private PostMongo createPost(UserMongo user, String title, String description) throws UnknownHostException {
+    private PostMongo createPost(long id, UserMongo user, String title, String description) throws UnknownHostException {
         final PostMongo post = new PostMongo();
+        post.setId(id);
         post.setTitle(title);
         post.setUser(user);
         post.setBody(description);

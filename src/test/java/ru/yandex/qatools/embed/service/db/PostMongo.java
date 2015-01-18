@@ -1,6 +1,5 @@
 package ru.yandex.qatools.embed.service.db;
 
-import org.bson.types.ObjectId;
 import org.mongodb.morphia.annotations.Embedded;
 import org.mongodb.morphia.annotations.Entity;
 import org.mongodb.morphia.annotations.Id;
@@ -12,7 +11,7 @@ import org.mongodb.morphia.annotations.Id;
 public class PostMongo {
 
     @Id
-    private ObjectId id;
+    private long id;
 
     @Embedded
     UserMongo user;
@@ -21,11 +20,11 @@ public class PostMongo {
 
     private String body;
 
-    public ObjectId getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(ObjectId id) {
+    public void setId(long id) {
         this.id = id;
     }
 

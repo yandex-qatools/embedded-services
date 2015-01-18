@@ -19,11 +19,12 @@ public interface IndexingService extends EmbeddedService {
 
     void addToIndex(String collectionName);
 
-    void initSettings(Map<String, Object> settings);
+    void initSettings(Map<String, Object> settings,
+                      Map<String, Map<String, Object>> typedFields);
 
-    void updateIndexSettings(Map<String, Object> settings);
+    void initSettings(Map<String, Object> settings, Map<String, Map<String, Object>> typedFields, Runnable callback);
 
-    void updateMappings(Map<String, Map<String, Object>> typedFields);
+    void updateMappings(Map<String, Map<String, Object>> typedFields, Runnable callback);
 
     String collectionName(Class modelClass);
 }
