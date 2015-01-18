@@ -4,7 +4,7 @@
 
     <groupId>ru.yandex.qatools.embed</groupId>
     <artifactId>embedded-services</artifactId>
-    <version>1.6-SNAPSHOT</version>
+    <version>1.6</version>
     <packaging>jar</packaging>
     <name>Embedded Services</name>
 
@@ -25,7 +25,7 @@
         <connection>scm:git:git@github.yandex-team.ru:tms/embedded-services.git</connection>
         <developerConnection>scm:git:git@github.yandex-team.ru:tms/embedded-services.git</developerConnection>
         <url>git@github.yandex-team.ru:tms/embedded-services.git</url>
-      <tag>HEAD</tag>
+      <tag>embedded-services-1.6</tag>
   </scm>
 
     <repositories>
