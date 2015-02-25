@@ -106,7 +106,7 @@
         <dependency>
             <groupId>com.github.richardwilly98.elasticsearch</groupId>
             <artifactId>elasticsearch-river-mongodb</artifactId>
-            <version>2.0.5.testpalm</version>
+            <version>2.0.6.testpalm</version>
             <exclusions>
                 <exclusion>
                     <artifactId>elasticsearch</artifactId>
