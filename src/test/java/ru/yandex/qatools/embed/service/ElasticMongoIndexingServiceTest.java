@@ -1,5 +1,6 @@
 package ru.yandex.qatools.embed.service;
 
+import de.flapdoodle.embed.mongo.distribution.Version;
 import org.javalite.common.Collections;
 import org.junit.After;
 import org.junit.Before;
@@ -32,7 +33,7 @@ public class ElasticMongoIndexingServiceTest {
     public static final String RS = "localhost:37017";
     public static final String DB = "mongolastic";
     public static final String USER = "user";
-    public static final String PASS = "pass";
+    public static final String PASS = "password";
     public static final int INIT_TIMEOUT = 10000;
     ElasticMongoIndexingService es;
     MongoEmbeddedService mongo;
@@ -41,7 +42,8 @@ public class ElasticMongoIndexingServiceTest {
 
     @Before
     public void startEmbeddedServers() throws IOException, InterruptedException {
-        mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, null, true, INIT_TIMEOUT);
+        mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, null, true, INIT_TIMEOUT)
+                .useVersion(Version.Main.V3_0).useWiredTiger();
         mongo.start();
         final MorphiaDBService dbService = new MorphiaDBService(RS, DB, USER, PASS);
         dbService.getDatastore().getDB().getMongo().setReadPreference(nearest());

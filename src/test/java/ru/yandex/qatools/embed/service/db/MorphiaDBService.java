@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.mongodb.MongoCredential.createMongoCRCredential;
+import static com.mongodb.MongoCredential.createCredential;
 import static java.util.Arrays.asList;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
@@ -30,7 +30,7 @@ public class MorphiaDBService {
             addresses.add(new ServerAddress(hostPort[0], Integer.valueOf(hostPort[1])));
         }
         mongoClient = ((!isEmpty(username) && !isEmpty(password))) ?
-                new MongoClient(addresses, asList(createMongoCRCredential(username, dbName, password.toCharArray()))) :
+                new MongoClient(addresses, asList(createCredential(username, dbName, password.toCharArray()))) :
                 new MongoClient(addresses);
         datastore = new Morphia().createDatastore(mongoClient, dbName);
     }

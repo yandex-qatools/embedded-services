@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collections;
 
+import static de.flapdoodle.embed.mongo.distribution.Version.Main.*;
 import static de.flapdoodle.embed.process.io.Processors.console;
 import static de.flapdoodle.embed.process.io.Processors.namedConsole;
 import static java.lang.Integer.parseInt;
@@ -36,8 +37,10 @@ import static org.apache.commons.lang3.StringUtils.join;
 public class MongoEmbeddedService extends AbstractEmbeddedService {
     private static final String HOST_PORT_SPLIT_PATTERN = "(?<!:):(?=[123456789]\\d*$)";
     public static final int INIT_TIMEOUT_MS = 25000;
-    public static final String REPLSET_OK_TOKEN = "replSet PRIMARY";
+    public static final String REPLSET_OK_TOKEN_2 = "replSet PRIMARY";
+    public static final String REPLSET_OK_TOKEN_3 = "transition to primary complete";
     public static final String USER_ADDED_TOKEN = "Successfully added user";
+    public static final String WIRED_TIGER = "wiredTiger";
     private MongodProcess mongod;
     private final String replicaSet;
     private final String host;
@@ -54,6 +57,9 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
     private String[] roles = {"\"readWrite\"", "{\"db\":\"local\",\"role\":\"read\"}"};
     private String adminUsername = "admin";
     private String adminPassword = "admin";
+    private boolean useWiredTiger = false;
+    private Version.Main useVersion = Version.Main.PRODUCTION;
+    private String authMechanisms = "MONGODB-CR";
 
     public MongoEmbeddedService(String replicaSet, String mongoDatabaseName,
                                 String mongoUsername, String mongoPassword, String replSetName) throws IOException {
@@ -80,10 +86,25 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         this.port = parseInt(replSetEl[1]);
     }
 
+    public MongoEmbeddedService useVersion(Version.Main useVersion) {
+        this.useVersion = useVersion;
+        return this;
+    }
+
+    public MongoEmbeddedService useAuthMechanisms(String mechanisms) {
+        this.authMechanisms = mechanisms;
+        return this;
+    }
+
+    public MongoEmbeddedService useWiredTiger() {
+        this.useWiredTiger = true;
+        return this;
+    }
+
     @Override
     public void doStart() {
         mongodOutput = new LogWatchStreamProcessor(
-                format(REPLSET_OK_TOKEN),
+                format(isMongo3() ? REPLSET_OK_TOKEN_3 : REPLSET_OK_TOKEN_2),
                 Collections.<String>emptySet(),
                 namedConsole("[mongod output]"));
         runtimeConfig = new RuntimeConfigBuilder()
@@ -96,30 +117,6 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         runtime = MongodStarter.getInstance(runtimeConfig);
 
         try {
-            final File lockFile = Paths.get(dataDirectory, "mongod.lock").toFile();
-            final IMongoCmdOptions cmdOptions = new MongoCmdOptionsBuilder()
-                    .enableAuth(true)
-                    .build();
-            MongodConfigBuilder builder = new MongodConfigBuilder()
-                    .version(Version.Main.PRODUCTION)
-                    .cmdOptions(cmdOptions)
-                    .net(new Net(host, port, Network.localhostIsIPv6()));
-
-            if (dataDirectory != null && replSetName != null) {
-                builder.replication(new Storage(dataDirectory, replSetName, 0));
-                try {
-                    delete(lockFile);
-                } catch (Exception e) {
-                    logger.warn("No lock file found for embedded mongodb or removal failed: " + e.getMessage());
-                }
-            }
-
-            mongodConfig = builder.build();
-
-            executable = null;
-            executable = runtime.prepare(mongodConfig);
-            mongod = executable.start();
-
             final MongoEmbeddedService self = this;
             getRuntime().addShutdownHook(new Thread() {
                 public void run() {
@@ -127,18 +124,63 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                 }
             });
 
-            if (newDirectory) {
-                if (replSetName != null) {
-                    try {
-                        initiateReplicaSet();
-                    } catch (InterruptedException e) {
-                        logger.error("Failed to intialize the replica set", e);
-                    }
-                }
-                addUsers();
-            }
+            startWithAuth();
+            addAdmin();
+            addUser();
         } catch (Exception e) {
             logger.error("Failed to startup embedded MongoDB", e);
+        }
+    }
+
+    private boolean isMongo3() {
+        return asList(V3_0, V3_1).contains(useVersion);
+    }
+
+    private void startWithAuth() throws IOException {
+        prepareExecutable(true);
+        startMongoProcess();
+    }
+
+    private void startMongoProcess() throws IOException {
+        mongod = executable.start();
+        if (newDirectory && replSetName != null) {
+            try {
+                initiateReplicaSet();
+            } catch (Exception e) {
+                logger.error("Failed to initialize replica set", e);
+            }
+        }
+    }
+
+    private void prepareExecutable(boolean authEnabled) throws IOException {
+        final MongoCmdOptionsBuilder cmdBuilder = new MongoCmdOptionsBuilder();
+        cmdBuilder.enableAuth(authEnabled);
+        if (useWiredTiger && isMongo3()) {
+            cmdBuilder.useStorageEngine(WIRED_TIGER);
+        }
+        final IMongoCmdOptions cmdOptions = cmdBuilder.build();
+        MongodConfigBuilder builder = new MongodConfigBuilder()
+                .version(useVersion)
+                .cmdOptions(cmdOptions)
+                .net(new Net(host, port, Network.localhostIsIPv6()));
+        if (authEnabled && isMongo3()) {
+            builder.setParameter("authenticationMechanisms", authMechanisms);
+        }
+        if (replSetName != null) {
+            removeLockFile(builder);
+            builder.replication(new Storage(dataDirectory, replSetName, 0));
+        }
+        mongodConfig = builder.build();
+        executable = null;
+        executable = runtime.prepare(mongodConfig);
+    }
+
+    private void removeLockFile(MongodConfigBuilder builder) {
+        final File lockFile = Paths.get(dataDirectory, "mongod.lock").toFile();
+        try {
+            delete(lockFile);
+        } catch (Exception e) {
+            logger.warn("No lock file found for embedded mongodb or removal failed: " + e.getMessage());
         }
     }
 
@@ -154,24 +196,36 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                 format("rs.initiate({\"_id\":\"%s\",\"members\":[{\"_id\":1,\"host\":\"%s:%s\"}]});",
                         replSetName, host, port),
                 "rs.slaveOk();rs.status();"), "");
-        runScriptAndWait(scriptText, null);
+        runScriptAndWait(scriptText, null, null, null, null);
         mongodOutput.waitForResult(INIT_TIMEOUT_MS);
     }
 
-    private void addUsers() throws IOException {
-        final String scriptText = join(format("db = db.getSiblingDB('admin');\n " +
-                                "db.createUser({\"user\":\"%s\",\"pwd\":\"%s\"," +
-                                "\"roles\":[\"dbAdminAnyDatabase\",\"clusterAdmin\",\"dbOwner\",\"userAdminAnyDatabase\"," +
-                                "{\"db\":\"local\",\"role\":\"dbAdmin\"},{\"db\":\"local\",\"role\":\"readWrite\"}]});\n",
-                        adminUsername, adminPassword),
-                format("db.auth('%s','%s');", adminUsername, adminPassword),
-                format("db = db.getSiblingDB('%s'); db.createUser({\"user\":\"%s\",\"pwd\":\"%s\",\"roles\":[%s]});\n" +
-                                "db.getUser('%s');",
-                        mongoDBName, username, password, StringUtils.join(roles, ","), username), "");
-        runScriptAndWait(scriptText, USER_ADDED_TOKEN);
+    private void addAdmin() throws IOException {
+        final String scriptText = join(
+                format("db.createUser(" +
+                                "{\"user\":\"%s\",\"pwd\":\"%s\"," +
+                                "\"roles\":[" +
+                                "\"root\"," +
+                                "{\"role\":\"userAdmin\",\"db\":\"admin\"}," +
+                                "{\"role\":\"dbAdmin\",\"db\":\"admin\"}," +
+                                "{\"role\":\"userAdminAnyDatabase\",\"db\":\"admin\"}," +
+                                "{\"role\":\"dbAdminAnyDatabase\",\"db\":\"admin\"}," +
+                                "{\"role\":\"clusterAdmin\",\"db\":\"admin\"}," +
+                                "{\"role\":\"dbOwner\",\"db\":\"admin\"}," +
+                                "]});\n",
+                        adminUsername, adminPassword));
+        runScriptAndWait(scriptText, USER_ADDED_TOKEN, "admin", null, null);
     }
 
-    private void runScriptAndWait(String scriptText, String token) throws IOException {
+    private void addUser() throws IOException {
+        final String scriptText = join(format("db = db.getSiblingDB('%s'); " +
+                        "db.createUser({\"user\":\"%s\",\"pwd\":\"%s\",\"roles\":[%s]});\n" +
+                        "db.getUser('%s');",
+                mongoDBName, username, password, StringUtils.join(roles, ","), username), "");
+        runScriptAndWait(scriptText, USER_ADDED_TOKEN, "admin", "admin", "admin");
+    }
+
+    private void runScriptAndWait(String scriptText, String token, String dbName, String username, String password) throws IOException {
         IStreamProcessor mongoOutput;
         if (!isEmpty(token)) {
             mongoOutput = new LogWatchStreamProcessor(
@@ -190,7 +244,17 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                 .build();
         MongoShellStarter starter = MongoShellStarter.getInstance(runtimeConfig);
         final File scriptFile = writeTmpScriptFile(scriptText);
-        starter.prepare(new MongoShellConfigBuilder()
+        final MongoShellConfigBuilder builder = new MongoShellConfigBuilder();
+        if (!isEmpty(dbName)) {
+            builder.dbName(dbName);
+        }
+        if (!isEmpty(username)) {
+            builder.username(username);
+        }
+        if (!isEmpty(password)) {
+            builder.password(password);
+        }
+        starter.prepare(builder
                 .scriptName(scriptFile.getAbsolutePath())
                 .version(mongodConfig.version())
                 .net(mongodConfig.net())
