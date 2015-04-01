@@ -41,6 +41,7 @@
         <elasticsearch.version>1.4.4</elasticsearch.version>
         <mongo-java-driver.version>2.13.0</mongo-java-driver.version>
         <sl4j.version>1.7.7</sl4j.version>
+        <elasticsearch-river-mongodb.version>2.0.8.testpalm</elasticsearch-river-mongodb.version>
     </properties>
 
     <dependencies>
@@ -105,7 +106,7 @@
         <dependency>
             <groupId>com.github.richardwilly98.elasticsearch</groupId>
             <artifactId>elasticsearch-river-mongodb</artifactId>
-            <version>2.0.8.testpalm</version>
+            <version>${elasticsearch-river-mongodb.version}</version>
             <exclusions>
                 <exclusion>
                     <artifactId>elasticsearch</artifactId>

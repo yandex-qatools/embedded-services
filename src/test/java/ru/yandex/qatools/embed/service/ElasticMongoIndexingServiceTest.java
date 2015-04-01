@@ -43,7 +43,7 @@ public class ElasticMongoIndexingServiceTest {
     @Before
     public void startEmbeddedServers() throws IOException, InterruptedException {
         mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, null, true, INIT_TIMEOUT)
-                .useVersion(Version.Main.V3_0).useWiredTiger();
+                .useVersion(Version.Main.PRODUCTION).useWiredTiger();
         mongo.start();
         final MorphiaDBService dbService = new MorphiaDBService(RS, DB, USER, PASS);
         dbService.getDatastore().getDB().getMongo().setReadPreference(nearest());
