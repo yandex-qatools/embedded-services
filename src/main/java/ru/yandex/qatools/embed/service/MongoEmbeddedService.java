@@ -17,6 +17,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.HashSet;
 
 import static de.flapdoodle.embed.mongo.distribution.Version.Main.*;
 import static de.flapdoodle.embed.process.io.Processors.console;
@@ -196,7 +197,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                 format("rs.initiate({\"_id\":\"%s\",\"members\":[{\"_id\":1,\"host\":\"%s:%s\"}]});",
                         replSetName, host, port),
                 "rs.slaveOk();rs.status();"), "");
-        runScriptAndWait(scriptText, null, null, null, null);
+        runScriptAndWait(scriptText, null, null, null, null, null);
         mongodOutput.waitForResult(INIT_TIMEOUT_MS);
     }
 
@@ -214,7 +215,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                                 "{\"role\":\"dbOwner\",\"db\":\"admin\"}," +
                                 "]});\n",
                         adminUsername, adminPassword));
-        runScriptAndWait(scriptText, USER_ADDED_TOKEN, "admin", null, null);
+        runScriptAndWait(scriptText, USER_ADDED_TOKEN, new String[]{"couldn't add user"}, "admin", null, null);
     }
 
     private void addUser() throws IOException {
@@ -222,15 +223,15 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                         "db.createUser({\"user\":\"%s\",\"pwd\":\"%s\",\"roles\":[%s]});\n" +
                         "db.getUser('%s');",
                 mongoDBName, username, password, StringUtils.join(roles, ","), username), "");
-        runScriptAndWait(scriptText, USER_ADDED_TOKEN, "admin", "admin", "admin");
+        runScriptAndWait(scriptText, USER_ADDED_TOKEN, new String[]{"already exists"}, "admin", "admin", "admin");
     }
 
-    private void runScriptAndWait(String scriptText, String token, String dbName, String username, String password) throws IOException {
+    private void runScriptAndWait(String scriptText, String token, String[] failures, String dbName, String username, String password) throws IOException {
         IStreamProcessor mongoOutput;
         if (!isEmpty(token)) {
             mongoOutput = new LogWatchStreamProcessor(
                     format(token),
-                    Collections.<String>emptySet(),
+                    (failures != null) ? new HashSet<>(asList(failures)) : Collections.<String>emptySet(),
                     namedConsole("[mongo shell output]"));
         } else {
             mongoOutput = new NamedOutputStreamProcessor("[mongo shell output]", console());

@@ -131,7 +131,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
         getClient().admin().indices().exists(new IndicesExistsRequest(dbName), new ActionListener<IndicesExistsResponse>() {
             @Override
             public void onResponse(IndicesExistsResponse response) {
-                if(!response.isExists()){
+                if (!response.isExists()) {
                     createIndex(settings);
                 }
                 updateMappings(typedFields, callback);
@@ -161,7 +161,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                         } else {
                             logger.info("Index does not exists {}, skipping remove...", dbName);
                         }
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         logger.error("Failed to recreate index {}", dbName, e);
                     }
 
@@ -197,7 +197,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
             try {
                 if (typedFields.isEmpty()) {
                     logger.info("Database {} skipping mapping configuration", dbName);
-                    if(callback != null){
+                    if (callback != null) {
                         callback.run();
                     }
                     return;
@@ -265,7 +265,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
                         sleepBetweenRequests();
                     }
                     logger.info("Database {} mapping requests sent to ES", dbName);
-                    if(callback != null){
+                    if (callback != null) {
                         callback.run();
                     }
                 } else {
