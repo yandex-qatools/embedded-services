@@ -8,24 +8,32 @@
     <packaging>jar</packaging>
     <name>Embedded Services</name>
 
-    <distributionManagement>
-        <repository>
-            <id>yandex_qa_releases</id>
-            <name>Releases</name>
-            <url>${releases-repo}</url>
-        </repository>
-        <snapshotRepository>
-            <id>yandex_qa_snapshots</id>
-            <name>Snapshots</name>
-            <url>${snapshots-repo}</url>
-        </snapshotRepository>
-    </distributionManagement>
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>9</version>
+    </parent>
+
+    <organization>
+        <name>Yandex</name>
+        <url>http://company.yandex.com</url>
+    </organization>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/yandex-qatools/embedded-services/issues</url>
+    </issueManagement>
 
     <scm>
-        <connection>scm:git:git@github.yandex-team.ru:tms/embedded-services.git</connection>
-        <developerConnection>scm:git:git@github.yandex-team.ru:tms/embedded-services.git</developerConnection>
-        <url>git@github.yandex-team.ru:tms/embedded-services.git</url>
-        <tag>HEAD</tag>
+        <connection>scm:git:git@github.com:yandex-qatools/embedded-services.git</connection>
+        <developerConnection>scm:git:git@github.com:yandex-qatools/embedded-services.git</developerConnection>
+        <url>git@github.com:yandex-qatools/embedded-services.git</url>
     </scm>
 
     <repositories>
@@ -41,7 +49,7 @@
         <elasticsearch.version>1.4.4</elasticsearch.version>
         <mongo-java-driver.version>2.13.0</mongo-java-driver.version>
         <sl4j.version>1.7.7</sl4j.version>
-        <elasticsearch-river-mongodb.version>2.0.8.testpalm</elasticsearch-river-mongodb.version>
+        <elasticsearch-river-mongodb.version>2.0.9</elasticsearch-river-mongodb.version>
     </properties>
 
     <dependencies>

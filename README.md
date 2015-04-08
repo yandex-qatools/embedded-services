@@ -1,9 +1,23 @@
 # Embedded services
 
 This project allows you to easily start your project with the embedded database (PostgreSQL, MongoDB) services and connect 
-them with the embedded ElasticSearch instance for better full text indexing and search.
+them with the embedded ElasticSearch instance for full text indexing and search.
 
-## Mongo with ElasticSearch
+## Why?
+
+It's very easy to incorporate the embedded MongoDB/PostgreSQL within your test process.
+
+### Maven
+
+Add the following dependency to your pom.xml:
+```xml
+    <dependency>
+        <groupId>ru.yandex.qatools.embed</groupId>
+        <artifactId>embedded-services</artifactId>
+        <version>1.10</version>
+    </dependency>
+```
+## How to run embedded MongoDB with ElasticSearch
 
 ```java
         // Starting the embedded services within temporary dir
@@ -23,7 +37,7 @@ them with the embedded ElasticSearch instance for better full text indexing and 
         List<IndexingResult> posts = elastic.search("posts", "body:(lorem AND NOT ipsum)")
 ```
 
-## Postgres with ElasticSearch
+## How to run embedded PostgreSQL with ElasticSearch
 
 ```java
         // Starting the embedded services within temporary dir
