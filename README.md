@@ -1,4 +1,5 @@
 # Embedded services
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ru.yandex.qatools.embed/embedded-services/badge.svg?style=flat)](https://maven-badges.herokuapp.com/maven-central/ru.yandex.qatools.embed/embedded-services) [![covarage](https://img.shields.io/sonar/http/sonar.qatools.ru/ru.yandex.qatools.embed:embedded-services/coverage.svg?style=flat)](http://sonar.qatools.ru/dashboard/index/210)
 
 This project allows you to easily start your project with the embedded database (PostgreSQL, MongoDB) services and connect 
 them with the embedded ElasticSearch instance for full text indexing and search.
