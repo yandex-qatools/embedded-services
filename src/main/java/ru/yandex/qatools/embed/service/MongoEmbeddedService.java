@@ -37,7 +37,7 @@ import static org.apache.commons.lang3.StringUtils.join;
  */
 public class MongoEmbeddedService extends AbstractEmbeddedService {
     private static final String HOST_PORT_SPLIT_PATTERN = "(?<!:):(?=[123456789]\\d*$)";
-    public static final int INIT_TIMEOUT_MS = 25000;
+    public static final int INIT_TIMEOUT_MS = 10000;
     public static final String REPLSET_OK_TOKEN_2 = "replSet PRIMARY";
     public static final String REPLSET_OK_TOKEN_3 = "transition to primary complete";
     public static final String USER_ADDED_TOKEN = "Successfully added user";
@@ -59,12 +59,19 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
     private String adminUsername = "admin";
     private String adminPassword = "admin";
     private boolean useWiredTiger = false;
+    private boolean useAuth = false;
     private Version.Main useVersion = Version.Main.PRODUCTION;
     private String authMechanisms = "MONGODB-CR";
+
+    public MongoEmbeddedService(String replicaSet, String mongoDatabaseName) throws IOException {
+        this(replicaSet, mongoDatabaseName, null, null, "local", null, true, 10000);
+        useAuth(false);
+    }
 
     public MongoEmbeddedService(String replicaSet, String mongoDatabaseName,
                                 String mongoUsername, String mongoPassword, String replSetName) throws IOException {
         this(replicaSet, mongoDatabaseName, mongoUsername, mongoPassword, replSetName, null, true, 10000);
+        useAuth(true);
     }
 
     public MongoEmbeddedService(String replicaSet,
@@ -85,6 +92,12 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         final String[] replSetEl = replicaSet.split(",")[0].split(HOST_PORT_SPLIT_PATTERN);
         this.host = replSetEl[0];
         this.port = parseInt(replSetEl[1]);
+        useAuth(true);
+    }
+
+    public MongoEmbeddedService useAuth(boolean auth) {
+        this.useAuth = auth;
+        return this;
     }
 
     public MongoEmbeddedService useVersion(Version.Main useVersion) {
@@ -127,7 +140,9 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
 
             startWithAuth();
             addAdmin();
-            addUser();
+            if (useAuth) {
+                addUser();
+            }
         } catch (Exception e) {
             logger.error("Failed to startup embedded MongoDB", e);
         }
@@ -138,7 +153,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
     }
 
     private void startWithAuth() throws IOException {
-        prepareExecutable(true);
+        prepareExecutable(useAuth);
         startMongoProcess();
     }
 
@@ -197,8 +212,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                 format("rs.initiate({\"_id\":\"%s\",\"members\":[{\"_id\":1,\"host\":\"%s:%s\"}]});",
                         replSetName, host, port),
                 "rs.slaveOk();rs.status();"), "");
-        runScriptAndWait(scriptText, null, null, null, null, null);
-        mongodOutput.waitForResult(INIT_TIMEOUT_MS);
+        runScriptAndWait(scriptText, isMongo3() ? REPLSET_OK_TOKEN_3 : REPLSET_OK_TOKEN_2, null, null, null, null);
     }
 
     private void addAdmin() throws IOException {

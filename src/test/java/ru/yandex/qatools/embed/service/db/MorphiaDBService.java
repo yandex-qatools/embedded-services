@@ -22,6 +22,11 @@ public class MorphiaDBService {
     private final Datastore datastore;
     private final MongoClient mongoClient;
 
+    public MorphiaDBService(String replicaSet, String dbName)
+            throws UnknownHostException {
+        this(replicaSet, dbName, null, null);
+    }
+
     public MorphiaDBService(String replicaSet, String dbName, String username, String password)
             throws UnknownHostException {
         List<ServerAddress> addresses = new ArrayList<>();
