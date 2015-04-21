@@ -6,7 +6,6 @@ import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.process.config.IRuntimeConfig;
 import de.flapdoodle.embed.process.config.io.ProcessOutput;
 import de.flapdoodle.embed.process.io.IStreamProcessor;
-import de.flapdoodle.embed.process.io.LogWatchStreamProcessor;
 import de.flapdoodle.embed.process.io.NamedOutputStreamProcessor;
 import de.flapdoodle.embed.process.runtime.Network;
 import org.apache.commons.lang3.StringUtils;
@@ -37,7 +36,7 @@ import static org.apache.commons.lang3.StringUtils.join;
  */
 public class MongoEmbeddedService extends AbstractEmbeddedService {
     private static final String HOST_PORT_SPLIT_PATTERN = "(?<!:):(?=[123456789]\\d*$)";
-    public static final int INIT_TIMEOUT_MS = 10000;
+    public static final int INIT_TIMEOUT_MS = 30000;
     public static final String REPLSET_OK_TOKEN_2 = "replSet PRIMARY";
     public static final String REPLSET_OK_TOKEN_3 = "transition to primary complete";
     public static final String USER_ADDED_TOKEN = "Successfully added user";
@@ -149,7 +148,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
     }
 
     private boolean isMongo3() {
-        return asList(V3_0, V3_1).contains(useVersion);
+        return asList(V3_0, V3_1, PRODUCTION, DEVELOPMENT).contains(useVersion);
     }
 
     private void startWithAuth() throws IOException {
@@ -212,7 +211,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                 format("rs.initiate({\"_id\":\"%s\",\"members\":[{\"_id\":1,\"host\":\"%s:%s\"}]});",
                         replSetName, host, port),
                 "rs.slaveOk();rs.status();"), "");
-        runScriptAndWait(scriptText, isMongo3() ? REPLSET_OK_TOKEN_3 : REPLSET_OK_TOKEN_2, null, null, null, null);
+        runScriptAndWait(scriptText, null, null, null, null, null);
         mongodOutput.waitForResult(INIT_TIMEOUT_MS);
     }
 
