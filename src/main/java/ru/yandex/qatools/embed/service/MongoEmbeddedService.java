@@ -213,6 +213,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                         replSetName, host, port),
                 "rs.slaveOk();rs.status();"), "");
         runScriptAndWait(scriptText, isMongo3() ? REPLSET_OK_TOKEN_3 : REPLSET_OK_TOKEN_2, null, null, null, null);
+        mongodOutput.waitForResult(INIT_TIMEOUT_MS);
     }
 
     private void addAdmin() throws IOException {
