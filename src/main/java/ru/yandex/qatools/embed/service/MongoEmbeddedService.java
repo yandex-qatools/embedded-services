@@ -36,7 +36,7 @@ import static org.apache.commons.lang3.StringUtils.join;
  */
 public class MongoEmbeddedService extends AbstractEmbeddedService {
     private static final String HOST_PORT_SPLIT_PATTERN = "(?<!:):(?=[123456789]\\d*$)";
-    public static final int INIT_TIMEOUT_MS = 10000;
+    public static final int INIT_TIMEOUT_MS = 30000;
     public static final String REPLSET_OK_TOKEN_2 = "replSet PRIMARY";
     public static final String REPLSET_OK_TOKEN_3 = "transition to primary complete";
     public static final String USER_ADDED_TOKEN = "Successfully added user";
