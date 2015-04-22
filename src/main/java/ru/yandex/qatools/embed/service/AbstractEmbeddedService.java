@@ -5,6 +5,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static jodd.io.FileUtil.createTempDirectory;
 import static jodd.io.FileUtil.deleteDir;
@@ -34,7 +38,7 @@ public abstract class AbstractEmbeddedService implements EmbeddedService {
         } else {
             this.dataDirectory = dataDirectory;
             this.removeDataDir = false;
-            this.newDirectory = !new File(dataDirectory).exists();
+            this.newDirectory = !new File(dataDirectory).exists() || isDatadirEmpty();
         }
     }
 
@@ -42,6 +46,15 @@ public abstract class AbstractEmbeddedService implements EmbeddedService {
     protected abstract void doStart() throws Exception;
 
     protected abstract void doStop() throws Exception;
+
+    public boolean isDatadirEmpty() {
+        try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(Paths.get(dataDirectory))) {
+            return !dirStream.iterator().hasNext();
+        } catch (IOException e) {
+            logger.error("Failed to check for data directory emptiness!", e);
+            return false;
+        }
+    }
 
     @Override
     public boolean isStarted() {
