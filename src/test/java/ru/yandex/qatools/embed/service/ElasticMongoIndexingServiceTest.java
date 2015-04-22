@@ -25,12 +25,12 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static ru.yandex.qatools.embed.service.IndexingServiceMatcher.findIndexedAtLeast;
+import static ru.yandex.qatools.embed.service.util.SocketUtil.findFreePort;
 import static ru.yandex.qatools.matchers.decorators.MatcherDecorators.should;
 import static ru.yandex.qatools.matchers.decorators.MatcherDecorators.timeoutHasExpired;
 
 public class ElasticMongoIndexingServiceTest {
     public static final String RS_NAME = "local";
-    public static final String RS = "localhost:37017";
     public static final String DB = "mongolastic";
     public static final String USER = "user";
     public static final String PASS = "password";
@@ -42,6 +42,7 @@ public class ElasticMongoIndexingServiceTest {
 
     @Before
     public void startEmbeddedServers() throws IOException, InterruptedException {
+        final String RS = "localhost:" + findFreePort();
         mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, null, true, INIT_TIMEOUT)
                 .useVersion(Version.Main.PRODUCTION).useWiredTiger();
         mongo.start();

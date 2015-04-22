@@ -16,9 +16,9 @@ import static com.mongodb.WriteConcern.ACKNOWLEDGED;
 import static jodd.io.FileUtil.createTempDirectory;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
+import static ru.yandex.qatools.embed.service.util.SocketUtil.findFreePort;
 
 public class MongoDBEmbeddedDoubleStartTest {
-    public static final String RS = "localhost:37017";
     public static final String DB = "mongolastic";
     public static final String RS_NAME = "local";
     public static final String USER = "user";
@@ -29,6 +29,7 @@ public class MongoDBEmbeddedDoubleStartTest {
 
     @Before
     public void startEmbeddedServers() throws IOException, InterruptedException {
+        final String RS = "localhost:" + findFreePort();
         tmpDir = createTempDirectory(getClass().getSimpleName().toLowerCase(), "data").getPath();
         mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, tmpDir, true, 10000)
                 .useVersion(Version.Main.PRODUCTION).useWiredTiger();
