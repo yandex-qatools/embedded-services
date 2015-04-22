@@ -36,7 +36,7 @@ import static org.apache.commons.lang3.StringUtils.join;
  */
 public class MongoEmbeddedService extends AbstractEmbeddedService {
     private static final String HOST_PORT_SPLIT_PATTERN = "(?<!:):(?=[123456789]\\d*$)";
-    public static final int INIT_TIMEOUT_MS = 30000;
+    public static final int INIT_TIMEOUT_MS = 10000;
     public static final String REPLSET_OK_TOKEN_2 = "replSet PRIMARY";
     public static final String REPLSET_OK_TOKEN_3 = "transition to primary complete";
     public static final String USER_ADDED_TOKEN = "Successfully added user";
@@ -229,7 +229,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                                 "{\"role\":\"dbOwner\",\"db\":\"admin\"}," +
                                 "]});\n",
                         adminUsername, adminPassword));
-        runScriptAndWait(scriptText, USER_ADDED_TOKEN, new String[]{"couldn't add user"}, "admin", null, null);
+        runScriptAndWait(scriptText, USER_ADDED_TOKEN, new String[]{"couldn't add user", "failed to load"}, "admin", null, null);
     }
 
     private void addUser() throws IOException {
@@ -237,7 +237,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                         "db.createUser({\"user\":\"%s\",\"pwd\":\"%s\",\"roles\":[%s]});\n" +
                         "db.getUser('%s');",
                 mongoDBName, username, password, StringUtils.join(roles, ","), username), "");
-        runScriptAndWait(scriptText, USER_ADDED_TOKEN, new String[]{"already exists"}, "admin", "admin", "admin");
+        runScriptAndWait(scriptText, USER_ADDED_TOKEN, new String[]{"already exists", "failed to load"}, "admin", "admin", "admin");
     }
 
     private void runScriptAndWait(String scriptText, String token, String[] failures, String dbName, String username, String password) throws IOException {
@@ -269,7 +269,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         if (!isEmpty(password)) {
             builder.password(password);
         }
-        starter.prepare(builder
+        MongoShellProcess p = starter.prepare(builder
                 .scriptName(scriptFile.getAbsolutePath())
                 .version(mongodConfig.version())
                 .net(mongodConfig.net())
