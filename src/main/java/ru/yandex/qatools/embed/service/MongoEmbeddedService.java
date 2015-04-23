@@ -70,7 +70,6 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
     public MongoEmbeddedService(String replicaSet, String mongoDatabaseName,
                                 String mongoUsername, String mongoPassword, String replSetName) throws IOException {
         this(replicaSet, mongoDatabaseName, mongoUsername, mongoPassword, replSetName, null, true, 10000);
-        useAuth(true);
     }
 
     public MongoEmbeddedService(String replicaSet,
@@ -91,7 +90,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         final String[] replSetEl = replicaSet.split(",")[0].split(HOST_PORT_SPLIT_PATTERN);
         this.host = replSetEl[0];
         this.port = parseInt(replSetEl[1]);
-        useAuth(true);
+        useAuth(!isEmpty(username) && !isEmpty(password));
     }
 
     public MongoEmbeddedService useAuth(boolean auth) {
