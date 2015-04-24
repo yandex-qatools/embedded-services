@@ -59,6 +59,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
             elasticsearchSettings.put(key, String.valueOf(settings.get(key)));
         }
         this.node = nodeBuilder().local(true).settings(elasticsearchSettings.build()).node();
+        node.client().admin().cluster().prepareHealth().setWaitForYellowStatus().execute().actionGet(initTimeout);
     }
 
     @Override
