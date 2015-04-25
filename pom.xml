@@ -235,6 +235,13 @@
 
     </dependencies>
     <build>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh</artifactId>
+                <version>2.5</version>
+            </extension>
+        </extensions>
         <testResources>
             <testResource>
                 <directory>${project.basedir}/src/test/resources</directory>
