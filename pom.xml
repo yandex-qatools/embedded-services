@@ -47,8 +47,8 @@
     <properties>
         <compiler.version>1.7</compiler.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <elasticsearch.version>1.5.1</elasticsearch.version>
-        <mongo-java-driver.version>2.13.0</mongo-java-driver.version>
+        <elasticsearch.version>1.6.0</elasticsearch.version>
+        <mongo-java-driver.version>2.13.2</mongo-java-driver.version>
         <sl4j.version>1.7.7</sl4j.version>
         <elasticsearch-river-mongodb.version>2.0.9</elasticsearch-river-mongodb.version>
     </properties>
@@ -80,7 +80,7 @@
         <dependency>
             <groupId>de.flapdoodle.embed</groupId>
             <artifactId>de.flapdoodle.embed.mongo</artifactId>
-            <version>1.47.2</version>
+            <version>1.48.0</version>
             <exclusions>
                 <exclusion>
                     <artifactId>slf4j-api</artifactId>
@@ -117,12 +117,12 @@
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
-            <version>2.3.8</version>
+            <version>2.4.3</version>
         </dependency>
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-expressions</artifactId>
-            <version>4.10.4</version>
+            <version>5.2.1</version>
         </dependency>
         <dependency>
             <groupId>com.github.richardwilly98.elasticsearch</groupId>
