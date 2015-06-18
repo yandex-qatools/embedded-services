@@ -61,6 +61,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
     private boolean useAuth = false;
     private Version.Main useVersion = Version.Main.PRODUCTION;
     private String authMechanisms = "MONGODB-CR";
+    private int oplogSizeMb = 100;
 
     public MongoEmbeddedService(String replicaSet, String mongoDatabaseName) throws IOException {
         this(replicaSet, mongoDatabaseName, null, null, "local", null, true, 10000);
@@ -91,6 +92,11 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         this.host = replSetEl[0];
         this.port = parseInt(replSetEl[1]);
         useAuth(!isEmpty(username) && !isEmpty(password));
+    }
+
+    public MongoEmbeddedService withOplogSize(int oplogSizeMb) {
+        this.oplogSizeMb = oplogSizeMb;
+        return this;
     }
 
     public MongoEmbeddedService useAuth(boolean auth) {
@@ -184,7 +190,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
         }
         if (replSetName != null) {
             removeLockFile(builder);
-            builder.replication(new Storage(dataDirectory, replSetName, 0));
+            builder.replication(new Storage(dataDirectory, replSetName, oplogSizeMb));
         }
         mongodConfig = builder.build();
         executable = null;
