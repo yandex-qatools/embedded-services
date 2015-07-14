@@ -32,9 +32,9 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedService implements IndexingService {
     public static final int MAP_REQ_DELAY_MS = 100;
     protected final String dbName;
-    protected volatile Node node;
     protected final Set<String> indexedCollections = newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     protected final Map<String, Object> settings = new HashMap<>();
+    protected volatile Node node;
 
     public AbstractElasticEmbeddedService(String dbName, String dataDirectory, boolean enabled, int initTimeout) throws IOException {
         super(dataDirectory, enabled, initTimeout);
@@ -52,10 +52,16 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
 
     protected abstract void indexCollection(String collectionName) throws IOException;
 
+    public void setBindHost(String host) {
+        settings.put("network.bind_host", host);
+        settings.put("network.publish_host", host);
+        settings.put("network.host", host);
+    }
+
     @Override
     public void doStart() {
         ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder();
-        for(String key : settings.keySet()){
+        for (String key : settings.keySet()) {
             elasticsearchSettings.put(key, String.valueOf(settings.get(key)));
         }
         this.node = nodeBuilder().local(true).settings(elasticsearchSettings.build()).node();

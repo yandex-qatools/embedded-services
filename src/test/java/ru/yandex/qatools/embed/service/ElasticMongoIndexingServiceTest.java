@@ -53,6 +53,7 @@ public class ElasticMongoIndexingServiceTest {
         userDAO = new UserDAO(dbService);
 
         es = new ElasticMongoIndexingService(RS, DB, USER, PASS, null, true, INIT_TIMEOUT);
+        es.setBindHost("localhost");
         es.start();
 
         es.initSettings(Collections.<String, Object>map(

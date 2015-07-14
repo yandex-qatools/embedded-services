@@ -39,6 +39,7 @@ public class ElasticPostgresIndexingServiceTest {
         postgres.start();
         elastic = new ElasticPostgresIndexingService(Driver.class, "postgresql", "",
                 HOST, PORT, USERNAME, PASSWORD, DB_NAME, idxDir, true, INIT_TIMEOUT);
+        elastic.setBindHost("localhost");
         elastic.start();
         database = new Database(HOST, PORT, DB_NAME, USERNAME, PASSWORD, POOL_SIZE);
         database.connect();
