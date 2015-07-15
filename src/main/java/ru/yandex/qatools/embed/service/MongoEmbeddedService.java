@@ -244,7 +244,7 @@ public class MongoEmbeddedService extends AbstractEmbeddedService {
                         "db.createUser({\"user\":\"%s\",\"pwd\":\"%s\",\"roles\":[%s]});\n" +
                         "db.getUser('%s');",
                 mongoDBName, username, password, StringUtils.join(roles, ","), username), "");
-        runScriptAndWait(scriptText, USER_ADDED_TOKEN, new String[]{"already exists", "failed to load", "login failed"}, "admin", "admin", "admin");
+        runScriptAndWait(scriptText, USER_ADDED_TOKEN, new String[]{"already exists", "failed to load", "login failed"}, "admin", adminUsername, adminPassword);
     }
 
     private void runScriptAndWait(String scriptText, String token, String[] failures, String dbName, String username, String password) throws IOException {
