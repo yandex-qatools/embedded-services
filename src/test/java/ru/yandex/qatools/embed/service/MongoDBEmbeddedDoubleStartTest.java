@@ -33,6 +33,8 @@ public class MongoDBEmbeddedDoubleStartTest {
         tmpDir = createTempDirectory(getClass().getSimpleName().toLowerCase(), "data").getPath();
         mongo = new MongoEmbeddedService(RS, DB, USER, PASS, RS_NAME, tmpDir, true, 10000)
                 .useVersion(Version.Main.PRODUCTION).useWiredTiger();
+        mongo.setAdminUsername("admin-username");
+        mongo.setAdminPassword("admin-password");
         mongo.start();
         mongo.stop();
         mongo.start();
