@@ -34,6 +34,10 @@ public class ElasticMongoIndexingService extends AbstractElasticEmbeddedService 
         this.password = mongoPassword;
     }
 
+
+    protected void addIndexAllCollectionsOptions(XContentBuilder config) {
+    }
+
     @Override
     protected void indexAllCollections() throws IOException {
         if (enabled) {
@@ -75,7 +79,9 @@ public class ElasticMongoIndexingService extends AbstractElasticEmbeddedService 
                         .field("secondary_read_preference", false)
                         .field("drop_collection", true)
                         .field("is_mongos", false)
-                        .field("import_all_collections", true)
+                        .field("import_all_collections", true);
+                        addIndexAllCollectionsOptions(config);
+                        config
                     .endObject()
                 .endObject()
                 .startObject("index")

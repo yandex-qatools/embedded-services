@@ -33,7 +33,10 @@ public abstract class AbstractEmbeddedService implements EmbeddedService {
 
         if (isEmpty(dataDirectory) || dataDirectory.equals("TMP")) {
             this.removeDataDir = true;
-            this.dataDirectory = createTempDirectory(getClass().getSimpleName().toLowerCase(), "data").getPath();
+            final String prefix = getClass().getName().substring(
+                    getClass().getName().lastIndexOf(".") + 1
+            );
+            this.dataDirectory = createTempDirectory(prefix, "data").getPath();
             this.newDirectory = true;
         } else {
             this.dataDirectory = dataDirectory;
