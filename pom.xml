@@ -47,7 +47,7 @@
     <properties>
         <compiler.version>1.7</compiler.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <elasticsearch.version>1.6.0</elasticsearch.version>
+        <elasticsearch.version>1.7.2</elasticsearch.version>
         <mongo-java-driver.version>2.13.2</mongo-java-driver.version>
         <sl4j.version>1.7.7</sl4j.version>
         <elasticsearch-river-mongodb.version>2.0.9</elasticsearch-river-mongodb.version>
