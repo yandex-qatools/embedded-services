@@ -128,7 +128,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
     @Override
     public void initSettings(final Map<String, Object> settings,
                              final Map<String, Map<String, Object>> typedFields) {
-        initSettings(settings, typedFields);
+        initSettings(settings, typedFields, null);
     }
 
     @Override

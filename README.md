@@ -15,7 +15,7 @@ Add the following dependency to your pom.xml:
     <dependency>
         <groupId>ru.yandex.qatools.embed</groupId>
         <artifactId>embedded-services</artifactId>
-        <version>1.15</version>
+        <version>1.18</version>
     </dependency>
 ```
 ## How to run embedded MongoDB with ElasticSearch
