@@ -23,7 +23,7 @@ import static java.lang.String.format;
 import static java.util.Collections.newSetFromMap;
 import static org.apache.commons.lang3.StringUtils.join;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.elasticsearch.index.query.QueryBuilders.queryString;
+import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
 /**
@@ -86,7 +86,7 @@ public abstract class AbstractElasticEmbeddedService extends AbstractEmbeddedSer
         final List<IndexingResult> results = new ArrayList<>();
         if (enabled) {
             logger.debug(format("Searching for '%s' in collection '%s' ...", value, collectionName));
-            final SearchResponse resp = search(collectionName, queryString(value));
+            final SearchResponse resp = search(collectionName, queryStringQuery(value));
             for (SearchHit hit : resp.getHits()) {
                 results.add(new IndexingResult(hit.getId(), hit.score(), hit.getSource()));
             }
