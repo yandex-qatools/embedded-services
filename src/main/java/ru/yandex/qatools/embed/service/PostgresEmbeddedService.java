@@ -1,9 +1,14 @@
 package ru.yandex.qatools.embed.service;
 
+import de.flapdoodle.embed.process.config.IRuntimeConfig;
+import ru.yandex.qatools.embed.postgresql.Command;
 import ru.yandex.qatools.embed.postgresql.PostgresExecutable;
 import ru.yandex.qatools.embed.postgresql.PostgresProcess;
 import ru.yandex.qatools.embed.postgresql.PostgresStarter;
+import ru.yandex.qatools.embed.postgresql.config.DownloadConfigBuilder;
 import ru.yandex.qatools.embed.postgresql.config.PostgresConfig;
+import ru.yandex.qatools.embed.postgresql.config.RuntimeConfigBuilder;
+import ru.yandex.qatools.embed.postgresql.ext.ArtifactStoreBuilder;
 
 import java.io.IOException;
 
@@ -39,9 +44,17 @@ public class PostgresEmbeddedService extends AbstractEmbeddedService {
 
     @Override
     public void doStart() throws Exception {
-        PostgresStarter<PostgresExecutable, PostgresProcess> runtime = PostgresStarter.getDefaultInstance();
-        final PostgresConfig configDb;
-        configDb = new PostgresConfig(
+        final IRuntimeConfig runtimeConfig = new RuntimeConfigBuilder()
+                .defaults(Command.Postgres)
+                .artifactStore(new ArtifactStoreBuilder()
+                        .defaults(Command.Postgres)
+                        .download(new DownloadConfigBuilder()
+                                .defaultsForCommand(Command.Postgres)
+                                .build()
+                        )
+                ).build();
+        final PostgresStarter<PostgresExecutable, PostgresProcess> runtime = PostgresStarter.getInstance(runtimeConfig);
+        final PostgresConfig configDb = new PostgresConfig(
                 PRODUCTION, new Net(host, port), new Storage(dbName, dataDirectory),
                 new Timeout(initTimeout), new Credentials(username, password));
         PostgresExecutable exec = runtime.prepare(configDb);
