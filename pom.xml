@@ -80,7 +80,7 @@
         <dependency>
             <groupId>de.flapdoodle.embed</groupId>
             <artifactId>de.flapdoodle.embed.mongo</artifactId>
-            <version>1.50.0</version>
+            <version>1.50.2</version>
             <exclusions>
                 <exclusion>
                     <artifactId>slf4j-api</artifactId>
